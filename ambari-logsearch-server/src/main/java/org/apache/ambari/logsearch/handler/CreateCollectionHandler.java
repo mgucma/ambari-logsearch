@@ -27,21 +27,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
+import org.apache.solr.client.solrj.impl.ClusterStateProvider;
 import org.apache.solr.client.solrj.impl.HttpClientUtil;
 import org.apache.solr.client.solrj.request.CollectionAdminRequest;
 import org.apache.solr.client.solrj.response.CollectionAdminResponse;
 import org.apache.solr.common.cloud.DocCollection;
 import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
-import org.apache.solr.common.cloud.ZkStateReader;
-
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-
+import java.util.Map;
 import static org.apache.ambari.logsearch.solr.SolrConstants.CommonLogConstants.ROUTER_FIELD;
 
 public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
@@ -65,7 +65,6 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
     } else {
       result = createCollection(solrClient, solrPropsConfig, this.allCollectionList);
     }
-
     return result;
   }
 
@@ -74,7 +73,7 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
     logger.info("setupCollectionsWithImplicitRouting(). collectionName=" + solrPropsConfig.getCollection()
       + ", numberOfShards=" + solrPropsConfig.getNumberOfShards());
 
-    // Default is true, because if the collection and shard is already there, then it will return true
+    // Jeśli kolekcja oraz shardy już istnieją, metoda zwróci true
     boolean returnValue = true;
 
     List<String> shardsList = new ArrayList<>();
@@ -83,22 +82,26 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
     }
     String shardsListStr = StringUtils.join(shardsList, ',');
 
-    // Check if collection is already in zookeeper
     if (!allCollectionList.contains(solrPropsConfig.getCollection())) {
       logger.info("Creating collection " + solrPropsConfig.getCollection() + ", shardsList=" + shardsList);
       CollectionAdminRequest.Create collectionCreateRequest = CollectionAdminRequest.createCollection(
-          solrPropsConfig.getCollection(), solrPropsConfig.getConfigName(), solrPropsConfig.getNumberOfShards(),
-          solrPropsConfig.getReplicationFactor());
+          solrPropsConfig.getCollection(), solrPropsConfig.getConfigName(),
+          solrPropsConfig.getNumberOfShards(), solrPropsConfig.getReplicationFactor());
       collectionCreateRequest.setRouterName("implicit");
       collectionCreateRequest.setShards(shardsListStr);
       collectionCreateRequest.setRouterField(ROUTER_FIELD);
-      collectionCreateRequest.setMaxShardsPerNode(solrPropsConfig.getReplicationFactor() * solrPropsConfig.getNumberOfShards());
+      // Ustawienie parametru maxShardsPerNode poprzez ustawienie właściwości
+      {
+        Map<String, String> props = new HashMap<>();
+        props.put("maxShardsPerNode", String.valueOf(solrPropsConfig.getReplicationFactor() * solrPropsConfig.getNumberOfShards()));
+        collectionCreateRequest.setProperties(props);
+      }
 
       CollectionAdminResponse createResponse = collectionCreateRequest.process(solrClient);
       if (createResponse.getStatus() != 0) {
         returnValue = false;
         logger.error("Error creating collection. collectionName=" + solrPropsConfig.getCollection()
-          + ", shardsList=" + shardsList +", response=" + createResponse);
+          + ", shardsList=" + shardsList + ", response=" + createResponse);
       } else {
         logger.info("Created collection " + solrPropsConfig.getCollection() + ", shardsList=" + shardsList);
       }
@@ -122,7 +125,8 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
                 CollectionAdminRequest.createShard(solrPropsConfig.getCollection(), shard);
             CollectionAdminResponse response = createShardRequest.process(solrClient);
             if (response.getStatus() != 0) {
-              logger.error("Error creating shard " + shard + " in collection " + solrPropsConfig.getCollection() + ", response=" + response);
+              logger.error("Error creating shard " + shard + " in collection " + solrPropsConfig.getCollection() 
+                + ", response=" + response);
               returnValue = false;
               break;
             } else {
@@ -151,16 +155,21 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
       ", replicationFactor=" + solrPropsConfig.getReplicationFactor());
 
     CollectionAdminRequest.Create collectionCreateRequest = CollectionAdminRequest.createCollection(
-        solrPropsConfig.getCollection(), solrPropsConfig.getConfigName(), solrPropsConfig.getNumberOfShards(),
-        solrPropsConfig.getReplicationFactor());
-    collectionCreateRequest.setMaxShardsPerNode(calculateMaxShardsPerNode(solrPropsConfig));
+        solrPropsConfig.getCollection(), solrPropsConfig.getConfigName(),
+        solrPropsConfig.getNumberOfShards(), solrPropsConfig.getReplicationFactor());
+    {
+      Map<String, String> props = new HashMap<>();
+      props.put("maxShardsPerNode", String.valueOf(calculateMaxShardsPerNode(solrPropsConfig)));
+      collectionCreateRequest.setProperties(props);
+    }
     CollectionAdminResponse createResponse = collectionCreateRequest.process(solrClient);
     if (createResponse.getStatus() != 0) {
-      logger.error("Error creating collection. collectionName=" + solrPropsConfig.getCollection() + ", response=" + createResponse);
+      logger.error("Error creating collection. collectionName=" + solrPropsConfig.getCollection() 
+        + ", response=" + createResponse);
       return false;
     } else {
-      logger.info("Created collection " + solrPropsConfig.getCollection() + ", numberOfShards=" + solrPropsConfig.getNumberOfShards() +
-        ", replicationFactor=" + solrPropsConfig.getReplicationFactor());
+      logger.info("Created collection " + solrPropsConfig.getCollection() + ", numberOfShards=" 
+        + solrPropsConfig.getNumberOfShards() + ", replicationFactor=" + solrPropsConfig.getReplicationFactor());
       return true;
     }
   }
@@ -170,19 +179,21 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
     if (baseUrl != null) {
       CloseableHttpClient httpClient = HttpClientUtil.createClient(null);
       HttpGet request = new HttpGet(baseUrl + String.format(MODIFY_COLLECTION_QUERY,
-        solrPropsConfig.getCollection(), MAX_SHARDS_PER_NODE, calculateMaxShardsPerNode(solrPropsConfig)));
+          solrPropsConfig.getCollection(), MAX_SHARDS_PER_NODE, calculateMaxShardsPerNode(solrPropsConfig)));
       HttpResponse response = httpClient.execute(request);
       if (response.getStatusLine().getStatusCode() != Response.Status.OK.getStatusCode()) {
-        throw new IllegalStateException(String.format("Cannot update collection (%s) - increase max number of nodes per core", solrPropsConfig.getCollection()));
+        throw new IllegalStateException(String.format("Cannot update collection (%s) - increase max number of nodes per core", 
+            solrPropsConfig.getCollection()));
       }
     } else {
-      throw new IllegalStateException(String.format("Cannot get any core url for updating collection (%s)", solrPropsConfig.getCollection()));
+      throw new IllegalStateException(String.format("Cannot get any core url for updating collection (%s)", 
+          solrPropsConfig.getCollection()));
     }
   }
 
   private Collection<Slice> getSlices(CloudSolrClient solrClient, SolrPropsConfig solrPropsConfig) {
-    ZkStateReader reader = solrClient.getZkStateReader();
-    DocCollection collection = reader.getClusterState().getCollection(solrPropsConfig.getCollection());
+    ClusterStateProvider stateProvider = solrClient.getClusterStateProvider();
+    DocCollection collection = stateProvider.getClusterState().getCollection(solrPropsConfig.getCollection());
     return collection.getSlices();
   }
 
@@ -190,8 +201,9 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
     Collection<String> list = new HashSet<>();
     for (Slice slice : slices) {
       for (Replica replica : slice.getReplicas()) {
-        logger.info("colName=" + solrPropsConfig.getCollection() + ", slice.name=" + slice.getName() + ", slice.state=" + slice.getState() +
-          ", replica.core=" + replica.getStr("core") + ", replica.state=" + replica.getStr("state"));
+        logger.info("colName=" + solrPropsConfig.getCollection() + ", slice.name=" + slice.getName() 
+          + ", slice.state=" + slice.getState() + ", replica.core=" + replica.getStr("core") 
+          + ", replica.state=" + replica.getStr("state"));
         list.add(slice.getName());
       }
     }
@@ -217,5 +229,4 @@ public class CreateCollectionHandler implements SolrZkRequestHandler<Boolean> {
   private Integer calculateMaxShardsPerNode(SolrPropsConfig solrPropsConfig) {
     return solrPropsConfig.getReplicationFactor() * solrPropsConfig.getNumberOfShards();
   }
-
 }

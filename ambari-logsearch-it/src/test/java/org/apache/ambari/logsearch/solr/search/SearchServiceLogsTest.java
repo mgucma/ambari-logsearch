@@ -4,8 +4,8 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -57,7 +57,12 @@ public class SearchServiceLogsTest {
 
   @BeforeClass
   public static void setUp() throws Exception {
-    solr = Solr.core("hadoop_logs");
+    try {
+      solr = Solr.core("hadoop_logs");
+    } catch (NoSuchMethodError e) {
+      throw new Exception("Inicjalizacja Solr nie powiodła się z powodu niekompatybilnej wersji Log4jLoggerFactory. " +
+          "Sprawdź, czy zależności log4j-slf4j-impl oraz SLF4J API są zgodne.", e);
+    }
   }
 
   @AfterClass
@@ -129,7 +134,6 @@ public class SearchServiceLogsTest {
     assert simpleQuery != null;
     return solr.executeQuery(new DefaultQueryParser().doConstructSolrQuery(simpleQuery));
   }
-
 
   @Test
   public void testIncludeMultipleLogMessageFilterContainsWildcard() throws Exception {
@@ -249,7 +253,6 @@ public class SearchServiceLogsTest {
     assertThat(found, hasItem(solrDoc("0")));
     assertThat(found, hasItem(solrDoc("3")));
   }
-
 
   private final ServiceLogLevelDateRangeRequestQueryConverter dateRangeRequestQueryConverter = new ServiceLogLevelDateRangeRequestQueryConverter();
 

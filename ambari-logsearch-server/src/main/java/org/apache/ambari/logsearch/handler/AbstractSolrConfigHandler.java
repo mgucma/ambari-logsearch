@@ -18,8 +18,6 @@
  */
 package org.apache.ambari.logsearch.handler;
 
-import static org.apache.solr.common.cloud.ZkConfigManager.CONFIGS_ZKNODE;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -28,13 +26,15 @@ import org.apache.ambari.logsearch.conf.SolrPropsConfig;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
-import org.apache.solr.common.cloud.SolrZkClient;
-import org.apache.solr.common.cloud.ZkConfigManager;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
 
 public abstract class AbstractSolrConfigHandler implements SolrZkRequestHandler<Boolean> {
 
   private static final Logger logger = LogManager.getLogger(AbstractSolrConfigHandler.class);
+  private static final String CONFIGS_ZKNODE = "/configs";
+  private static final int ZK_SESSION_TIMEOUT = 30000; // 30 sekund
 
   private File configSetFolder;
 
@@ -47,70 +47,83 @@ public abstract class AbstractSolrConfigHandler implements SolrZkRequestHandler<
     boolean reloadCollectionNeeded = false;
     String separator = FileSystems.getDefault().getSeparator();
     solrClient.connect();
-    SolrZkClient zkClient = solrClient.getZkStateReader().getZkClient();
+    // Uzyskaj adres ZooKeepera z konfiguracji, zamiast solrClient.getZkHost()
+    String zkHost = solrPropsConfig.getZkConnectString();
+    ZooKeeper zk = new ZooKeeper(zkHost, ZK_SESSION_TIMEOUT, event -> {
+      // Pusta implementacja Watchera
+    });
     try {
-      ZkConfigManager zkConfigManager = new ZkConfigManager(zkClient);
-      boolean configExists = zkConfigManager.configExists(solrPropsConfig.getConfigName());
-      if (configExists) {
-        uploadMissingConfigFiles(zkClient, zkConfigManager, solrPropsConfig.getConfigName());
-        reloadCollectionNeeded = doIfConfigExists(solrPropsConfig, zkClient, separator);
+      String configPath = CONFIGS_ZKNODE + "/" + solrPropsConfig.getConfigName();
+      Stat stat = zk.exists(configPath, false);
+      if (stat != null) {
+        // Konfiguracja już istnieje
+        uploadMissingConfigFiles(zk, configPath);
+        reloadCollectionNeeded = doIfConfigExists(solrPropsConfig, zk, separator);
       } else {
-        doIfConfigNotExist(solrPropsConfig, zkConfigManager);
-        uploadMissingConfigFiles(zkClient, zkConfigManager, solrPropsConfig.getConfigName());
+        // Konfiguracja nie istnieje – wykonaj akcje dla nieistniejącego configu
+        doIfConfigNotExist(solrPropsConfig, zk);
+        uploadMissingConfigFiles(zk, configPath);
       }
     } catch (Exception e) {
       throw new RuntimeException(String.format("Cannot upload configurations to zk. (collection: %s, config set folder: %s)",
         solrPropsConfig.getCollection(), solrPropsConfig.getConfigSetFolder()), e);
+    } finally {
+      zk.close();
     }
     return reloadCollectionNeeded;
   }
 
   /**
-   * Update config file (like solrconfig.xml) to zookeeper znode of solr
-   * @param solrPropsConfig hold global solr configurations
-   * @param zkClient zk client of the solr client
-   * @param file that needs to be uploaded to zookeeper
-   * @param separator file separator
-   * @param content file content
-   * @return true if upload was successful (or can be skipped)
-   * @throws IOException error during file uploading
+   * Metoda abstrakcyjna, która aktualizuje plik konfiguracyjny (np. solrconfig.xml) na znode w ZooKeeperze.
+   * @param solrPropsConfig globalne ustawienia Solr
+   * @param zk instancja ZooKeeper
+   * @param file plik, który należy przesłać do ZooKeepera
+   * @param separator separator systemowy
+   * @param content zawartość pliku
+   * @return true, jeśli aktualizacja została wykonana lub można ją pominąć
+   * @throws IOException błąd podczas przesyłania pliku
    */
-  public abstract boolean updateConfigIfNeeded(SolrPropsConfig solrPropsConfig, SolrZkClient zkClient, File file,
+  public abstract boolean updateConfigIfNeeded(SolrPropsConfig solrPropsConfig, ZooKeeper zk, File file,
                                                String separator, byte[] content) throws IOException;
 
   /**
-   * Get config file name
-   * @return config file name which should be uploaded to zookeeper
+   * Zwraca nazwę pliku konfiguracyjnego, który powinien być przesłany do ZooKeepera.
    */
   public abstract String getConfigFileName();
 
-  @SuppressWarnings("unused")
-  public void doIfConfigNotExist(SolrPropsConfig solrPropsConfig, ZkConfigManager zkConfigManager) throws IOException {
-    // Do nothing
+  /**
+   * Metoda wywoływana, gdy konfiguracja nie istnieje.
+   * Domyślnie nie robi nic.
+   */
+  public void doIfConfigNotExist(SolrPropsConfig solrPropsConfig, ZooKeeper zk) throws IOException {
+    // Domyślnie brak akcji
   }
 
-  @SuppressWarnings("unused")
-  public void uploadMissingConfigFiles(SolrZkClient zkClient, ZkConfigManager zkConfigManager, String configName) throws IOException {
-    // do Nothing
+  /**
+   * Metoda wywoływana, gdy konfiguracja już istnieje.
+   * Domyślnie nie robi nic.
+   */
+  public void uploadMissingConfigFiles(ZooKeeper zk, String configPath) throws IOException {
+    // Domyślnie brak akcji
   }
 
-  public boolean doIfConfigExists(SolrPropsConfig solrPropsConfig, SolrZkClient zkClient, String separator) throws IOException {
+  public boolean doIfConfigExists(SolrPropsConfig solrPropsConfig, ZooKeeper zk, String separator) throws IOException {
     logger.info("Config set exists for '{}' collection. Refreshing it if needed...", solrPropsConfig.getCollection());
     try {
       File[] listOfFiles = getConfigSetFolder().listFiles();
       if (listOfFiles == null)
         return false;
-      byte[] data = zkClient.getData(String.format("%s/%s/%s", CONFIGS_ZKNODE, solrPropsConfig.getConfigName(), getConfigFileName()), null, null, true);
+      String configFilePath = String.format("%s/%s/%s", CONFIGS_ZKNODE, solrPropsConfig.getConfigName(), getConfigFileName());
+      byte[] data = zk.getData(configFilePath, false, null);
 
       for (File file : listOfFiles) {
-        if (file.getName().equals(getConfigFileName()) && updateConfigIfNeeded(solrPropsConfig, zkClient, file, separator, data)) {
+        if (file.getName().equals(getConfigFileName()) && updateConfigIfNeeded(solrPropsConfig, zk, file, separator, data)) {
           return true;
         }
       }
       return false;
     } catch (KeeperException | InterruptedException e) {
-      throw new IOException("Error downloading files from zookeeper path " + solrPropsConfig.getConfigName(),
-              SolrZkClient.checkInterrupted(e));
+      throw new IOException("Error downloading files from zookeeper path " + solrPropsConfig.getConfigName(), e);
     }
   }
 

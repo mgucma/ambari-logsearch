@@ -18,7 +18,12 @@
  */
 package org.apache.ambari.logfeeder.common;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,13 +33,8 @@ import org.apache.solr.client.solrj.impl.LBHttpSolrClient;
 import org.apache.solr.common.cloud.ClusterState;
 import org.apache.solr.common.cloud.DocCollection;
 import org.apache.solr.common.cloud.Replica;
-import org.apache.solr.common.cloud.ZkStateReader;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Factory for creating specific Solr clients based on provided configurations (simple / LB or cloud Solr client)
@@ -96,7 +96,7 @@ public class LogFeederSolrClientFactory {
   }
 
   private CloudSolrClient createSolrCloudClient(String zkConnectionString, String collection) {
-    logger.info("Using zookeepr. zkConnectString=" + zkConnectionString);
+    logger.info("Using zookeeper. zkConnectString=" + zkConnectionString);
     final ZkConnection zkConnection = createZKConnection(zkConnectionString);
     final CloudSolrClient.Builder builder =
       new CloudSolrClient.Builder(zkConnection.getZkHosts(), Optional.ofNullable(zkConnection.getZkChroot()));
@@ -118,8 +118,8 @@ public class LogFeederSolrClientFactory {
     final List<String> baseUrls = new ArrayList<>();
     while(true) {
       try {
-        ZkStateReader zkStateReader = discoverClient.getZkStateReader();
-        ClusterState clusterState = zkStateReader.getClusterState();
+        // Zamiast ZkStateReader używamy getClusterStateProvider() do pobrania stanu klastra
+        ClusterState clusterState = discoverClient.getClusterStateProvider().getClusterState();
         if (clusterState != null) {
           DocCollection docCollection = clusterState.getCollection(collection);
           if (docCollection != null) {
@@ -135,7 +135,7 @@ public class LogFeederSolrClientFactory {
           }
         }
       } catch (Exception e) {
-        logger.error("Error during getting Solr node data by discovery solr loud client", e);
+        logger.error("Error during getting Solr node data by discovery solr cloud client", e);
       }
       if (baseUrls.isEmpty()) {
         logger.info("Not found any base urls yet for '{}' collection. Retrying ...", collection);

@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -130,8 +131,11 @@ public class SolrCollectionConfigurer implements Configurer {
 
   private CloudSolrClient createClient(String solrUrl, String zookeeperConnectString, String defaultCollection) {
     if (StringUtils.isNotEmpty(zookeeperConnectString)) {
-      CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder().withZkHost(zookeeperConnectString).build();
-      cloudSolrClient.setDefaultCollection(defaultCollection);
+      // Używamy nowej sygnatury: Builder(List<String> zkHosts, Optional<String> defaultCollection)
+      CloudSolrClient cloudSolrClient = new CloudSolrClient.Builder(
+          java.util.Collections.singletonList(zookeeperConnectString),
+          Optional.of(defaultCollection)
+      ).build();
       return cloudSolrClient;
     } else if (StringUtils.isNotEmpty(solrUrl)) {
       throw new UnsupportedOperationException("Currently only cloud mode is supported. Set zookeeper connect string.");
@@ -210,11 +214,10 @@ public class SolrCollectionConfigurer implements Configurer {
             "If you are using alias, then you might have to restart LogSearch after Solr is up and running.");
           break;
         } else {
-          logger.warn("Solr is not not reachable yet. getCollections() attempt count=" + pingCount + ". " +
+          logger.warn("Solr is not reachable yet. getCollections() attempt count=" + pingCount + ". " +
             "Will sleep for " + waitIntervalMS + " ms and try again.");
         }
         Thread.sleep(waitIntervalMS);
-
       }
     } catch (Throwable t) {
       logger.error("Seems Solr is not up.");

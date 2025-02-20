@@ -25,14 +25,13 @@ module.exports = function (config) {
     frameworks: ['jasmine', '@angular/cli'],
     plugins: [
       require('karma-jasmine'),
-      require('karma-phantomjs-launcher'),
-      require('karma-chrome-launcher'),
+      require('karma-chrome-launcher'), // Usunięto PhantomJS, dodano Chrome
       require('karma-jasmine-html-reporter'),
       require('karma-coverage-istanbul-reporter'),
       require('@angular/cli/plugins/karma')
     ],
-    client:{
-      clearContext: false // leave Jasmine Spec Runner output visible in browser
+    client: {
+      clearContext: false // Pozostawia widoczny wynik Jasmine Spec Runner w przeglądarce
     },
     files: [
       { pattern: './src/test.ts', watched: false }
@@ -41,7 +40,7 @@ module.exports = function (config) {
       './src/test.ts': ['@angular/cli']
     },
     mime: {
-      'text/x-typescript': ['ts','tsx']
+      'text/x-typescript': ['ts', 'tsx']
     },
     coverageIstanbulReporter: {
       reports: ['html', 'lcovonly'],
@@ -51,13 +50,29 @@ module.exports = function (config) {
       environment: 'dev'
     },
     reporters: config.angularCli && config.angularCli.codeCoverage
-              ? ['progress', 'coverage-istanbul']
-              : ['progress', 'kjhtml'],
+      ? ['progress', 'coverage-istanbul']
+      : ['progress', 'kjhtml'],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: false,
-    browsers: ['PhantomJS'],
+    browsers: ['ChromeHeadlessCustom'], // Użycie niestandardowego launchera
+    customLaunchers: {
+      ChromeHeadlessCustom: {
+        base: 'ChromeHeadless',
+        flags: [
+          '--no-sandbox',             // Wymagane w niektórych środowiskach CI
+          '--disable-gpu',            // Wyłączenie GPU w trybie headless
+          '--remote-debugging-port=9222', // Port do debugowania
+          '--disable-web-security',   // Wyłączenie zabezpieczeń CORS (opcjonalnie)
+          '--disable-dev-shm-usage'   // Rozwiązanie problemów z pamięcią w środowiskach CI
+        ]
+      }
+    },
+    // Zwiększone limity czasowe dla lepszego wsparcia w środowiskach CI
+    captureTimeout: 120000,
+    browserDisconnectTimeout: 120000,
+    browserNoActivityTimeout: 120000,
     singleRun: true
   });
 };

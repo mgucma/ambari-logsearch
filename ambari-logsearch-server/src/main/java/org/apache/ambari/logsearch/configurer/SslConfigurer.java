@@ -35,6 +35,9 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
@@ -42,11 +45,9 @@ import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.bc.BcContentSignerBuilder;
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.eclipse.jetty.util.ssl.SslContextFactory.Server;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -134,7 +135,8 @@ public class SslConfigurer {
   }
   
   public SslContextFactory getSslContextFactory() {
-    SslContextFactory sslContextFactory = new SslContextFactory();
+    // Używamy SslContextFactory.Server, która jest implementacją SslContextFactory
+    SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
     sslContextFactory.setKeyStorePath(getKeyStoreLocation());
     sslContextFactory.setKeyStorePassword(getKeyStorePassword());
     sslContextFactory.setKeyStoreType(getKeyStoreType());
@@ -148,7 +150,7 @@ public class SslConfigurer {
   }
 
   public SSLContext getSSLContext() {
-    SslContextFactory sslContextFactory = getSslContextFactory();
+    SslContextFactory.Server sslContextFactory = (SslContextFactory.Server) getSslContextFactory();
     
     try {
       sslContextFactory.start();
@@ -258,28 +260,31 @@ public class SslConfigurer {
     }
   }
 
-  private void ensureStorePassword(String locationArg, String pwdArg, String propertyName, String fileName) {
-    if (StringUtils.isNotEmpty(System.getProperty(locationArg)) && StringUtils.isEmpty(System.getProperty(pwdArg))) {
-      String password = getPassword(propertyName, fileName);
-      System.setProperty(pwdArg, password);
-    }
-  }
-  
-  public void ensureStorePasswords() {
-    ensureStorePassword(KEYSTORE_LOCATION_ARG, KEYSTORE_PASSWORD_ARG, KEYSTORE_PASSWORD_PROPERTY_NAME, KEYSTORE_PASSWORD_FILE);
-    ensureStorePassword(TRUSTSTORE_LOCATION_ARG, TRUSTSTORE_PASSWORD_ARG, TRUSTSTORE_PASSWORD_PROPERTY_NAME, TRUSTSTORE_PASSWORD_FILE);
+  // Dodane metody:
+
+  /**
+   * Tworzy instancję KeyPairGenerator przy użyciu podanego algorytmu i bitCount.
+   */
+  private KeyPairGenerator createKeyPairGenerator(String algorithmIdentifier, int bitCount)
+    throws NoSuchProviderException, NoSuchAlgorithmException {
+    KeyPairGenerator kpg = KeyPairGenerator.getInstance(algorithmIdentifier, BouncyCastleProvider.PROVIDER_NAME);
+    kpg.initialize(bitCount);
+    return kpg;
   }
 
+  /**
+   * Odczytuje certyfikat X509 z podanej lokalizacji.
+   */
   private X509Certificate getCertFile(String location) throws Exception {
-    try (FileInputStream fos = new FileInputStream(location)) {
+    try (FileInputStream fis = new FileInputStream(location)) {
       CertificateFactory factory = CertificateFactory.getInstance("X.509");
-      return (X509Certificate) factory.generateCertificate(fos);
+      return (X509Certificate) factory.generateCertificate(fis);
     } catch (Exception e) {
       logger.error("Cannot read cert file. ('" + location + "')", e);
       throw e;
     }
   }
-
+  
   private X509Certificate createCert(KeyPair keyPair, String signatureAlgoritm, String domainName)
     throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, OperatorCreationException, CertificateException, IOException {
     
@@ -298,7 +303,7 @@ public class SslConfigurer {
         new X500Name("CN=" + domainName + ", OU=None, O=None L=None, C=None"),
         BigInteger.valueOf(Math.abs(new SecureRandom().nextInt())),
         new Date(System.currentTimeMillis() - 1000L * 60 * 60 * 24 * 30),
-        new Date(System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 365*10)),
+        new Date(System.currentTimeMillis() + (1000L * 60 * 60 * 24 * 365 * 10)),
         new X500Name("CN=" + domainName + ", OU=None, O=None L=None, C=None"),
         pubKey);
     
@@ -311,15 +316,20 @@ public class SslConfigurer {
     return certConverter.getCertificate(certificateHolder);
   }
 
-  private KeyPairGenerator createKeyPairGenerator(String algorithmIdentifier, int bitCount)
-    throws NoSuchProviderException, NoSuchAlgorithmException {
-    KeyPairGenerator kpg = KeyPairGenerator.getInstance(algorithmIdentifier, BouncyCastleProvider.PROVIDER_NAME);
-    kpg.initialize(bitCount);
-    return kpg;
+  private void ensureStorePassword(String locationArg, String pwdArg, String propertyName, String fileName) {
+    if (StringUtils.isNotEmpty(System.getProperty(locationArg)) && StringUtils.isEmpty(System.getProperty(pwdArg))) {
+      String password = getPassword(propertyName, fileName);
+      System.setProperty(pwdArg, password);
+    }
+  }
+  
+  public void ensureStorePasswords() {
+    ensureStorePassword(KEYSTORE_LOCATION_ARG, KEYSTORE_PASSWORD_ARG, KEYSTORE_PASSWORD_PROPERTY_NAME, KEYSTORE_PASSWORD_FILE);
+    ensureStorePassword(TRUSTSTORE_LOCATION_ARG, TRUSTSTORE_PASSWORD_ARG, TRUSTSTORE_PASSWORD_PROPERTY_NAME, TRUSTSTORE_PASSWORD_FILE);
   }
 
   /**
-   * Create keystore with keys and certificate (only if the keystore does not exist or if you have no permissions on the keystore file)
+   * Put private key into in-memory keystore and write it to a file (JKS file)
    */
   public void loadKeystore() {
     try {

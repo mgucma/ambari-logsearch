@@ -17,7 +17,8 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <artifactId>ambari-logsearch</artifactId>
     <groupId>org.apache.ambari</groupId>
@@ -34,6 +35,7 @@
     <it.skip>true</it.skip>
     <jbehave.version>4.0.5</jbehave.version>
     <jbehave-selenium>3.5.5</jbehave-selenium>
+    <!-- Ustawiamy wersję Jersey na 2.23.1, by pobierała Jetty 9.4.x -->
     <jersey.version>2.23.1</jersey.version>
     <jackson-jaxrs.version>2.9.4</jackson-jaxrs.version>
     <failsafe-plugin.version>2.20</failsafe-plugin.version>
@@ -41,7 +43,29 @@
     <logsearch.docker.host>localhost</logsearch.docker.host>
     <backend.stories.location>NONE</backend.stories.location>
     <ui.stories.location>NONE</ui.stories.location>
+    <!-- Zakładamy, że ${solr.version} odpowiada wersji 9.8.0 -->
   </properties>
+
+  <!-- Wymuszenie spójnych wersji bibliotek Jetty (wersje 9.4.57.v20241219) -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-http</artifactId>
+        <version>9.4.57.v20241219</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-io</artifactId>
+        <version>9.4.57.v20241219</version>
+      </dependency>
+      <dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>9.4.57.v20241219</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -58,17 +82,35 @@
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-solrj</artifactId>
       <version>${solr.version}</version>
+      <!-- Wykluczamy tylko jetty-io i jetty-util -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-io</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-core</artifactId>
       <version>${solr.version}</version>
+      <!-- Nie wykluczamy jetty-http -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-io</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
-    <dependency>
-      <groupId>org.apache.solr</groupId>
-      <artifactId>solr-dataimporthandler</artifactId>
-      <version>${solr.version}</version>
-    </dependency>
+    <!-- Usunięto dependency solr-dataimporthandler -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -87,16 +129,47 @@
       <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-client</artifactId>
       <version>${jersey.version}</version>
+      <!-- Wykluczenie jersey-container-jetty-http, by nie pobierał Jetty 10 -->
+      <exclusions>
+        <exclusion>
+          <groupId>org.glassfish.jersey.containers</groupId>
+          <artifactId>jersey-container-jetty-http</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Dodajemy jawnie jetty-client w wersji 9.4.57.v20241219 -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-client</artifactId>
+      <version>9.4.57.v20241219</version>
+    </dependency>
+    <!-- Jawne deklaracje Jetty – wersje pobierane z dependencyManagement -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-http</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>1.7.20</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-io</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.20</version>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-util</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>2.17.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>2.17.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-api</artifactId>
+      <version>2.17.1</version>
     </dependency>
     <dependency>
       <groupId>com.flipkart.zjsonpatch</groupId>
@@ -108,8 +181,8 @@
           <artifactId>guava</artifactId>
         </exclusion>
         <exclusion>
-          <artifactId>jackson-core</artifactId>
           <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -119,8 +192,17 @@
       <version>${project.version}</version>
       <exclusions>
         <exclusion>
-          <artifactId>jackson-core</artifactId>
           <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <!-- Usunięto wykluczenia dla jetty-http, aby ta zależność była dołączona -->
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-io</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -135,17 +217,25 @@
       <version>${project.version}</version>
       <exclusions>
         <exclusion>
-          <artifactId>jackson-core</artifactId>
           <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+        <!-- Usunięto wykluczenia dla jetty-http, aby ta zależność była dołączona -->
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-io</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-util</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>16.0.1</version>
+      <version>32.0.0-jre</version>
     </dependency>
-
     <dependency>
       <groupId>com.hubspot.jinjava</groupId>
       <artifactId>jinjava</artifactId>

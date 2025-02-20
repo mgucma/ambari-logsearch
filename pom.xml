@@ -80,25 +80,25 @@
   </profiles>
   <properties>
     <revision>3.0.0.0-SNAPSHOT</revision>
-    <jdk.version>1.8</jdk.version>
+    <jdk.version>17</jdk.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <python.ver>python &gt;= 2.6</python.ver>
-    <deb.python.ver>python (&gt;= 2.6)</deb.python.ver>
+    <python.ver>python &gt;= 3.6</python.ver>
+    <deb.python.ver>python (&gt;= 3.6)</deb.python.ver>
     <deb.architecture>amd64</deb.architecture>
     <deb.dependency.list>${deb.python.ver}</deb.dependency.list>
-    <solr.version>7.6.0</solr.version>
-    <hadoop.version>3.1.1.3.0.2.0-50</hadoop.version>
+    <solr.version>9.8.0</solr.version>
+    <hadoop.version>3.4.1</hadoop.version>
     <common.io.version>2.5</common.io.version>
-    <zookeeper.version>3.4.6.2.3.0.0-2557</zookeeper.version>
+    <zookeeper.version>3.9.3</zookeeper.version>
     <forkCount>4</forkCount>
     <reuseForks>false</reuseForks>
     <surefire.argLine>-Xmx1024m -Xms512m</surefire.argLine>
     <skipSurefireTests>false</skipSurefireTests>
-    <compiler.version>3.8.0</compiler.version>
+    <compiler.version>3.12.1</compiler.version>
     <ambari-metrics.version>2.7.0.0.0</ambari-metrics.version>
     <logsearch.docker.tag>latest</logsearch.docker.tag>
-    <fasterxml-jackson.version>2.10.0</fasterxml-jackson.version>
-    <log4j2.version>2.11.1</log4j2.version>
+    <fasterxml-jackson.version>2.18.2</fasterxml-jackson.version>
+    <log4j2.version>2.24.3</log4j2.version>
     <swagger-ui.version>3.19.0</swagger-ui.version>
   </properties>
 
@@ -120,10 +120,18 @@
 
   <repositories>
     <repository>
-      <id>apache-hadoop</id>
-      <name>hdp</name>
-      <url>http://repo.hortonworks.com/content/groups/public/</url>
+      <id>central</id>
+      <url>https://repo.maven.apache.org/maven2</url>
     </repository>
+    <repository>
+      <id>apache.snapshots</id>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+    </repository>
+    <repository>
+      <id>apache.releases</id>
+      <url>https://repository.apache.org/content/repositories/releases</url>
+    </repository>
+
     <repository>
       <id>oss.sonatype.org</id>
       <name>OSS Sonatype Staging</name>
@@ -132,7 +140,7 @@
     <repository>
       <id>spring-milestones</id>
       <name>Spring Milestones</name>
-      <url>http://repo.spring.io/milestone</url>
+      <url>https://repo.spring.io/milestone</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -424,7 +432,7 @@
       <dependency>
         <groupId>commons-fileupload</groupId>
         <artifactId>commons-fileupload</artifactId>
-        <version>1.3.3</version>
+        <version>1.5</version>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
@@ -465,7 +473,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>28.0-jre</version>
+        <version>32.0.0-jre</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

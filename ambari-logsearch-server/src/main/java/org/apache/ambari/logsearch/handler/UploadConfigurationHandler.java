@@ -31,9 +31,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.cloud.SolrZkClient;
-import org.apache.solr.common.cloud.ZkConfigManager;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooKeeper;
 
 public class UploadConfigurationHandler extends AbstractSolrConfigHandler {
 
@@ -52,27 +52,26 @@ public class UploadConfigurationHandler extends AbstractSolrConfigHandler {
   }
 
   @Override
-  public boolean updateConfigIfNeeded(SolrPropsConfig solrPropsConfig, SolrZkClient zkClient, File file,
+  public boolean updateConfigIfNeeded(SolrPropsConfig solrPropsConfig, ZooKeeper zk, File file,
                                       String separator, byte[] content) throws IOException {
-    if (Arrays.equals(FileUtils.readFileToByteArray(file), content))
+    if (Arrays.equals(FileUtils.readFileToByteArray(file), content)) {
       return false;
+    }
 
-    logger.info("Solr config file differs ('{}'), upload config set to zookeeper", file.getName());
-    ZkConfigManager zkConfigManager = new ZkConfigManager(zkClient);
-    zkConfigManager.uploadConfigDir(getConfigSetFolder().toPath(), solrPropsConfig.getConfigName());
-    String filePath = String.format("%s%s%s", getConfigSetFolder(), separator, getConfigFileName());
-    String configsPath = String.format("/%s/%s/%s", "configs", solrPropsConfig.getConfigName(), getConfigFileName());
-    uploadFileToZk(zkClient, filePath, configsPath);
+    logger.info("Solr config file differs ('{}'), uploading config set to ZooKeeper", file.getName());
+    // Upload cały katalog konfiguracyjny
+    uploadConfigDir(zk, solrPropsConfig.getConfigName(), getConfigSetFolder());
+    String filePath = getConfigSetFolder().getAbsolutePath() + separator + getConfigFileName();
+    String configsPath = String.format("/configs/%s/%s", solrPropsConfig.getConfigName(), getConfigFileName());
+    uploadFileToZk(zk, filePath, configsPath);
     return true;
   }
 
   @Override
-  public void doIfConfigNotExist(SolrPropsConfig solrPropsConfig, ZkConfigManager zkConfigManager) throws IOException {
-    logger.info("Config set does not exist for '{}' collection. Uploading it to zookeeper...", solrPropsConfig.getCollection());
-    File[] listOfFiles = getConfigSetFolder().listFiles();
-    if (listOfFiles != null) {
-      zkConfigManager.uploadConfigDir(getConfigSetFolder().toPath(), solrPropsConfig.getConfigName());
-    }
+  public void doIfConfigNotExist(SolrPropsConfig solrPropsConfig, ZooKeeper zk) throws IOException {
+    logger.info("Config set does not exist for '{}' collection. Uploading it to ZooKeeper...", solrPropsConfig.getCollection());
+    // Upload całego katalogu konfiguracji
+    uploadConfigDir(zk, solrPropsConfig.getConfigName(), getConfigSetFolder());
   }
 
   @Override
@@ -81,38 +80,70 @@ public class UploadConfigurationHandler extends AbstractSolrConfigHandler {
   }
 
   @Override
-  public void uploadMissingConfigFiles(SolrZkClient zkClient, ZkConfigManager zkConfigManager, String configName) throws IOException {
-    logger.info("Check any of the configs files are missing for config ({})", configName);
+  public void uploadMissingConfigFiles(ZooKeeper zk, String configName) throws IOException {
+    logger.info("Checking if any config files are missing for config ({})", configName);
     for (String configFile : configFiles) {
       if ("enumsConfig.xml".equals(configFile) && !hasEnumConfig) {
         logger.info("Config file ({}) is not needed for {}", configFile, configName);
         continue;
       }
-      String zkPath = String.format("%s/%s", configName, configFile);
-      if (zkConfigManager.configExists(zkPath)) {
-        logger.info("Config file ({}) has already uploaded properly.", configFile);
+      String zkPath = String.format("/configs/%s/%s", configName, configFile);
+      if (existsInZooKeeper(zk, zkPath)) {
+        logger.info("Config file ({}) has already been uploaded properly.", configFile);
       } else {
-        logger.info("Config file ({}) is missing. Reupload...", configFile);
-        FileSystems.getDefault().getSeparator();
-        uploadFileToZk(zkClient,
-          String.format("%s%s%s", getConfigSetFolder(), FileSystems.getDefault().getSeparator(), configFile),
-          String.format("%s%s", "/configs/", zkPath));
+        logger.info("Config file ({}) is missing. Reuploading...", configFile);
+        String localFilePath = getConfigSetFolder().getAbsolutePath() + FileSystems.getDefault().getSeparator() + configFile;
+        uploadFileToZk(zk, localFilePath, zkPath);
       }
     }
   }
 
-  private void uploadFileToZk(SolrZkClient zkClient, String filePath, String configsPath) throws FileNotFoundException {
+  private boolean existsInZooKeeper(ZooKeeper zk, String path) throws IOException {
+    try {
+      return zk.exists(path, false) != null;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  private void uploadFileToZk(ZooKeeper zk, String filePath, String zkPath) throws FileNotFoundException {
     InputStream is = new FileInputStream(filePath);
     try {
-      if (zkClient.exists(configsPath, true)) {
-        zkClient.setData(configsPath, IOUtils.toByteArray(is), true);
+      byte[] data = IOUtils.toByteArray(is);
+      if (zk.exists(zkPath, false) != null) {
+        zk.setData(zkPath, data, -1);
       } else {
-        zkClient.create(configsPath, IOUtils.toByteArray(is), CreateMode.PERSISTENT, true);
+        zk.create(zkPath, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       }
     } catch (Exception e) {
       throw new IllegalStateException(e);
     } finally {
       IOUtils.closeQuietly(is);
+    }
+  }
+
+  private void uploadConfigDir(ZooKeeper zk, String configName, File configDir) throws IOException {
+    if (!configDir.isDirectory()) {
+      throw new IOException("Not a directory: " + configDir);
+    }
+    // Utwórz główny znode dla konfiguracji, jeśli nie istnieje
+    String basePath = "/configs/" + configName;
+    try {
+      if (zk.exists(basePath, false) == null) {
+        zk.create(basePath, new byte[0], ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      }
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+    // Przesyłanie plików rekurencyjnie
+    for (File file : configDir.listFiles()) {
+      if (file.isDirectory()) {
+        String subConfigName = configName + "/" + file.getName();
+        uploadConfigDir(zk, subConfigName, file);
+      } else {
+        String zkFilePath = String.format("/configs/%s/%s", configName, file.getName());
+        uploadFileToZk(zk, file.getAbsolutePath(), zkFilePath);
+      }
     }
   }
 }

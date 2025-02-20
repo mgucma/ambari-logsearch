@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.CloudSolrClient;
+import org.apache.solr.client.solrj.impl.ClusterStateProvider;
 import org.apache.solr.client.solrj.impl.HttpClientUtil;
 import org.apache.solr.client.solrj.request.schema.FieldTypeDefinition;
 import org.apache.solr.client.solrj.request.schema.SchemaRequest;
@@ -37,9 +38,9 @@ import org.apache.solr.client.solrj.response.LukeResponse;
 import org.apache.solr.client.solrj.response.LukeResponse.FieldInfo;
 import org.apache.solr.client.solrj.response.schema.SchemaResponse;
 import org.apache.solr.common.SolrException;
+import org.apache.solr.common.cloud.DocCollection;
 import org.apache.solr.common.cloud.Replica;
 import org.apache.solr.common.cloud.Slice;
-import org.apache.solr.common.cloud.ZkStateReader;
 import org.apache.solr.common.util.JavaBinCodec;
 import org.apache.solr.common.util.NamedList;
 import org.codehaus.jettison.json.JSONObject;
@@ -111,7 +112,7 @@ public class SolrSchemaFieldDao {
         logger.debug("populateSchemaFields() collection=" + solrClient.getDefaultCollection() + ", luke=" + lukeResponses +
             ", schema= " + schemaResponse);
       } catch (SolrException | SolrServerException | IOException e) {
-        logger.error("Error occured while popuplating field. collection=" + solrClient.getDefaultCollection(), e);
+        logger.error("Error occured while populating field. collection=" + solrClient.getDefaultCollection(), e);
       }
 
       if (schemaResponse != null) {
@@ -132,8 +133,10 @@ public class SolrSchemaFieldDao {
   
   @SuppressWarnings("unchecked")
   private List<LukeResponse> getLukeResponsesForCores(CloudSolrClient solrClient) {
-    ZkStateReader zkStateReader = solrClient.getZkStateReader();
-    Collection<Slice> activeSlices = zkStateReader.getClusterState().getCollection(solrClient.getDefaultCollection()).getActiveSlices();
+    // Zamiast ZkStateReader używamy ClusterStateProvider
+    ClusterStateProvider stateProvider = solrClient.getClusterStateProvider();
+    DocCollection collection = stateProvider.getClusterState().getCollection(solrClient.getDefaultCollection());
+    Collection<Slice> activeSlices = collection.getActiveSlices();
     
     List<LukeResponse> lukeResponses = new ArrayList<>();
     for (Slice slice : activeSlices) {
@@ -141,7 +144,7 @@ public class SolrSchemaFieldDao {
         try (CloseableHttpClient httpClient = HttpClientUtil.createClient(null)) {
           HttpGet request = new HttpGet(replica.getCoreUrl() + LUKE_REQUEST_URL_SUFFIX);
           HttpResponse response = httpClient.execute(request);
-          @SuppressWarnings("resource") // JavaBinCodec implements Closeable, yet it can't be closed if it is used for unmarshalling only
+          @SuppressWarnings("resource") // JavaBinCodec implementuje Closeable, ale nie można go zamknąć przy tylko de-serializacji
           NamedList<Object> lukeData = (NamedList<Object>) new JavaBinCodec().unmarshal(response.getEntity().getContent());
           LukeResponse lukeResponse = new LukeResponse();
           lukeResponse.setResponse(lukeData);

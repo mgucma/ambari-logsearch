@@ -18,34 +18,34 @@
  */
 package org.apache.ambari.logfeeder.input;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.ambari.logfeeder.common.LogFeederConstants;
 import org.apache.ambari.logfeeder.conf.LogEntryCacheConfig;
 import org.apache.ambari.logfeeder.conf.LogFeederProps;
 import org.apache.ambari.logfeeder.container.docker.DockerContainerRegistry;
 import org.apache.ambari.logfeeder.container.docker.DockerMetadata;
+import org.apache.ambari.logfeeder.input.file.ProcessFileHelper;
 import org.apache.ambari.logfeeder.input.monitor.DockerLogFileUpdateMonitor;
 import org.apache.ambari.logfeeder.input.monitor.LogFileDetachMonitor;
 import org.apache.ambari.logfeeder.input.monitor.LogFilePathUpdateMonitor;
 import org.apache.ambari.logfeeder.input.reader.LogsearchReaderFactory;
-import org.apache.ambari.logfeeder.input.file.ProcessFileHelper;
 import org.apache.ambari.logfeeder.plugin.filter.Filter;
 import org.apache.ambari.logfeeder.plugin.input.Input;
 import org.apache.ambari.logfeeder.util.FileUtil;
 import org.apache.ambari.logsearch.config.api.model.inputconfig.InputFileBaseDescriptor;
 import org.apache.ambari.logsearch.config.api.model.inputconfig.InputFileDescriptor;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.util.Base64;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Input file object holds input shipper configurations, and can be used to start threads to monitor specific input file.
@@ -323,7 +323,7 @@ public class InputFile extends Input<LogFeederProps, InputFileMarker, InputFileB
   public BufferedReader openLogFile(File logFile) throws Exception {
     BufferedReader br = new BufferedReader(LogsearchReaderFactory.INSTANCE.getReader(logFile));
     fileKey = getFileKeyFromLogFile(logFile);
-    base64FileKey = Base64.byteArrayToBase64(fileKey.toString().getBytes());
+    base64FileKey = Base64.getEncoder().encodeToString(fileKey.toString().getBytes());
     logger.info("fileKey=" + fileKey + ", base64=" + base64FileKey + ". " + getShortDescription());
     return br;
   }

@@ -18,7 +18,19 @@
  */
 package org.apache.ambari.logfeeder.input;
 
-import com.google.common.base.Joiner;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.ambari.logfeeder.conf.InputSimulateConfig;
 import org.apache.ambari.logfeeder.conf.LogFeederProps;
 import org.apache.ambari.logfeeder.filter.FilterJSON;
@@ -31,19 +43,8 @@ import org.apache.ambari.logsearch.config.json.model.inputconfig.impl.InputDescr
 import org.apache.commons.collections.MapUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.util.Base64;
 
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.common.base.Joiner;
 
 /**
  * Input type for simulating inputs for Log Feeder
@@ -179,7 +180,7 @@ public class InputSimulate extends InputFile {
       // skip
       fileKey = "localhost|" + getFilePath();
     }
-    return Base64.byteArrayToBase64(fileKey.getBytes());
+    return Base64.getEncoder().encodeToString(fileKey.getBytes());
   }
 
   private String getLine() {

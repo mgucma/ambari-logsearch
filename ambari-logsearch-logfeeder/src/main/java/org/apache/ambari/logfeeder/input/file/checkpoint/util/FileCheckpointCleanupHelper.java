@@ -18,16 +18,16 @@
  */
 package org.apache.ambari.logfeeder.input.file.checkpoint.util;
 
+import java.io.EOFException;
+import java.io.File;
+import java.io.RandomAccessFile;
+import java.util.Base64;
+import java.util.Map;
+
 import org.apache.ambari.logfeeder.util.FileUtil;
 import org.apache.ambari.logfeeder.util.LogFeederUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.solr.common.util.Base64;
-
-import java.io.EOFException;
-import java.io.File;
-import java.io.RandomAccessFile;
-import java.util.Map;
 
 /**
  * Utility class to cleanup checkpoint files.
@@ -72,7 +72,7 @@ public class FileCheckpointCleanupHelper {
     boolean deleted = false;
     try (RandomAccessFile checkPointReader = new RandomAccessFile(checkPointFile, "r")) {
       int contentSize = checkPointReader.readInt();
-      byte b[] = new byte[contentSize];
+      byte[] b = new byte[contentSize];
       int readSize = checkPointReader.read(b, 0, contentSize);
       if (readSize != contentSize) {
         logger.error("Couldn't read expected number of bytes from checkpoint file. expected=" + contentSize + ", read="
@@ -92,7 +92,7 @@ public class FileCheckpointCleanupHelper {
           File logFile = new File(logFilePath);
           if (logFile.exists()) {
             Object fileKeyObj = FileUtil.getFileKey(logFile);
-            String fileBase64 = Base64.byteArrayToBase64(fileKeyObj.toString().getBytes());
+            String fileBase64 = Base64.getEncoder().encodeToString(fileKeyObj.toString().getBytes());
             if (!logFileKey.equals(fileBase64)) {
               logger.info("CheckPoint clean: File key has changed. old=" + logFileKey + ", new=" + fileBase64 + ", filePath=" +
                 logFilePath + ", checkPointFile=" + checkPointFile.getAbsolutePath());
@@ -125,7 +125,7 @@ public class FileCheckpointCleanupHelper {
   private static boolean wasFileRenamed(File folder, String searchFileBase64) {
     for (File file : folder.listFiles()) {
       Object fileKeyObj = FileUtil.getFileKey(file);
-      String fileBase64 = Base64.byteArrayToBase64(fileKeyObj.toString().getBytes());
+      String fileBase64 = Base64.getEncoder().encodeToString(fileKeyObj.toString().getBytes());
       if (searchFileBase64.equals(fileBase64)) {
         // even though the file name in the checkpoint file is different from the one it was renamed to, checkpoint files are
         // identified by their name, which is generated from the file key, which would be the same for the renamed file
@@ -135,6 +135,4 @@ public class FileCheckpointCleanupHelper {
     }
     return false;
   }
-
-
 }

@@ -4,8 +4,8 @@
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -42,7 +42,6 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.NodeConfig;
-import org.apache.solr.core.SolrResourceLoader;
 
 public class Solr {
   public static final DateTimeFormatter SOLR_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
@@ -62,9 +61,8 @@ public class Solr {
       FileUtils.deleteDirectory(solrHomeDir);
     solrHomeDir.mkdirs();
 
-    SolrResourceLoader solrResourceLoader = new SolrResourceLoader(solrHomeDir.toPath());
-
-    NodeConfig config = new NodeConfig.NodeConfigBuilder("embeddedSolrServerNode", solrResourceLoader)
+    // Bezpośrednio przekazujemy obiekt Path do konstruktora NodeConfig.NodeConfigBuilder
+    NodeConfig config = new NodeConfig.NodeConfigBuilder("embeddedSolrServerNode", solrHomeDir.toPath())
             .setConfigSetBaseDirectory(targetConfigSetDir.getAbsolutePath())
             .build();
 

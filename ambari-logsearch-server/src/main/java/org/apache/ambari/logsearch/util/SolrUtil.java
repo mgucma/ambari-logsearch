@@ -29,7 +29,6 @@ import org.apache.ambari.logsearch.common.LogSearchConstants;
 import org.apache.lucene.analysis.core.KeywordTokenizerFactory;
 import org.apache.lucene.analysis.path.PathHierarchyTokenizerFactory;
 import org.apache.lucene.analysis.standard.StandardTokenizerFactory;
-import org.apache.lucene.analysis.util.TokenizerFactory;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -102,7 +101,7 @@ public class SolrUtil {
       return "";
     }
     String newSearch = search.replaceAll("[\\t\\n\\r]", " ");
-    newSearch = newSearch.replaceAll("(?=[]\\[+&|!(){}^~=$/@%?:.\\\\-])", "\\\\");
+    newSearch = newSearch.replaceAll("(?=[]\\[+&|!(){}^~=$/@%?:.\\\\])", "\\\\");
 
     return newSearch.replace(" ", "\\ ");
   }
@@ -241,9 +240,9 @@ public class SolrUtil {
   }
 
   @SuppressWarnings("unchecked")
-  private static boolean checkTokenizer(Class<? extends TokenizerFactory> tokenizerFactoryClass, Map<String, Object> fieldTypeInfoMap) {
+  private static boolean checkTokenizer(Class<?> tokenizerFactoryClass, Map<String, Object> fieldTypeInfoMap) {
     HashMap<String, Object> analyzer = (HashMap<String, Object>) fieldTypeInfoMap.get("analyzer");
-    HashMap<String, Object> tokenizerMap = (HashMap<String, Object>)MapUtils.getObject(analyzer, "tokenizer");
+    HashMap<String, Object> tokenizerMap = (HashMap<String, Object>) MapUtils.getObject(analyzer, "tokenizer");
     if (tokenizerMap != null) {
       String tokenizerClass = (String) tokenizerMap.get("class");
       if (StringUtils.isNotEmpty(tokenizerClass)) {
