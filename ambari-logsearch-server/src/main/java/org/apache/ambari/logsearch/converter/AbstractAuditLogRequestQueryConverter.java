@@ -1,8 +1,7 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -39,13 +38,13 @@ public abstract class AbstractAuditLogRequestQueryConverter<SOURCE extends BaseL
     String sortType = request.getSortType();
     Sort.Order defaultSortOrder;
     if (StringUtils.isNotBlank(sortBy)) {
-      Sort.Direction direction = StringUtils.equals(sortType , LogSearchConstants.ASCENDING_ORDER) ? Sort.Direction.ASC : Sort.Direction.DESC;
+      Sort.Direction direction = StringUtils.equals(sortType, LogSearchConstants.ASCENDING_ORDER) ? Sort.Direction.ASC : Sort.Direction.DESC;
       defaultSortOrder = new Sort.Order(direction, sortBy);
     } else {
       defaultSortOrder = new Sort.Order(Sort.Direction.DESC, AUDIT_EVTTIME);
     }
     Sort.Order sequenceIdOrder = new Sort.Order(Sort.Direction.DESC, SEQUENCE_ID);
-    return new Sort(defaultSortOrder, sequenceIdOrder);
+    return Sort.by(defaultSortOrder, sequenceIdOrder);
   }
 
   @Override

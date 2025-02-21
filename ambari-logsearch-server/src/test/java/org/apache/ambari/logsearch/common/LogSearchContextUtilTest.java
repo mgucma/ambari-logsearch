@@ -23,7 +23,7 @@ import org.apache.ambari.logsearch.web.model.User;
 import org.junit.Before;
 import org.junit.Test;
 
-import junit.framework.Assert;
+import static org.junit.Assert.*;
 
 public class LogSearchContextUtilTest {
 
@@ -34,7 +34,7 @@ public class LogSearchContextUtilTest {
   
   @Test
   public void testNoContext() {
-    Assert.assertNull(LogSearchContext.getCurrentUsername());
+    assertNull(LogSearchContext.getCurrentUsername());
   }
   
   @Test
@@ -46,6 +46,6 @@ public class LogSearchContextUtilTest {
     
     LogSearchContext.setContext(context);
     
-    Assert.assertEquals(LogSearchContext.getCurrentUsername(), "UserName");
+    assertEquals("UserName", LogSearchContext.getCurrentUsername());
   }
 }

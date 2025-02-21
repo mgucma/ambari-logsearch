@@ -24,6 +24,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
 import org.springframework.data.solr.core.query.SimpleFacetQuery;
 
 import static org.junit.Assert.assertNotNull;
@@ -45,7 +46,8 @@ public class AuditComponentRequestQueryConverterTest extends AbstractRequestConv
     fillCommonRequestWithTestData(request);
     // WHEN
     SimpleFacetQuery facetQuery = underTest.convert(request);
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(facetQuery);
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(facetQuery, SimpleFacetQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=evtTime%3A%5B*+TO+*%5D&fq=cluster%3Acl1&facet=true&facet.mincount=1&facet.limit=-1&facet.sort=index&facet.field=repo",
       query.toQueryString());
@@ -57,11 +59,11 @@ public class AuditComponentRequestQueryConverterTest extends AbstractRequestConv
     AuditComponentRequest request = new AuditComponentQueryRequest();
     // WHEN
     SimpleFacetQuery facetQuery = underTest.convert(request);
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(facetQuery);
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(facetQuery, SimpleFacetQuery.class);
     // THEN
     assertNotNull(facetQuery);
     assertEquals("?q=*%3A*&rows=0&fq=evtTime%3A%5B*+TO+*%5D&facet=true&facet.mincount=1&facet.limit=-1&facet.sort=index&facet.field=repo",
       query.toQueryString());
   }
-
 }

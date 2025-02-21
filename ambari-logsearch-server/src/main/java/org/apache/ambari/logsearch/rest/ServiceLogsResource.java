@@ -1,427 +1,617 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * distributed with this work for additional information regarding copyright ownership.
+ * The ASF licenses this file under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.  You may obtain a copy
+ * of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
-package org.apache.ambari.logsearch.rest;
+package org.apache.ambari.logsearch.manager;
 
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.EXPORT_TO_TEXT_FILE_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_AFTER_BEFORE_LOGS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_AGGREGATED_INFO_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_ANY_GRAPH_COUNT_DATA_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_COMPONENTS_COUNT_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_COMPONENTS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_COMPONENT_LIST_WITH_LEVEL_COUNT_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_HISTOGRAM_DATA_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_HOSTS_COUNT_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_HOSTS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_HOST_LIST_BY_COMPONENT_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_HOST_LOGFILES_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_LOG_LEVELS_COUNT_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_SERVICE_CLUSTERS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_SERVICE_LOGS_SCHEMA_FIELD_NAME_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.GET_TREE_EXTENSION_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.PURGE_LOGS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.REQUEST_CANCEL;
-import static org.apache.ambari.logsearch.doc.DocConstants.ServiceOperationDescriptions.SEARCH_LOGS_OD;
+import static org.apache.ambari.logsearch.solr.SolrConstants.CommonLogConstants.CLUSTER;
+import static org.apache.ambari.logsearch.solr.SolrConstants.CommonLogConstants.ID;
+import static org.apache.ambari.logsearch.solr.SolrConstants.CommonLogConstants.SEQUENCE_ID;
+import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.COMPONENT;
+import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.HOST;
+import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.KEY_LOG_MESSAGE;
+import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.LEVEL;
+import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.LOGTIME;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.io.UncheckedIOException;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.validation.Valid;
-import javax.validation.executable.ValidateOnExecution;
-import javax.ws.rs.BeanParam;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.ambari.logsearch.common.LabelFallbackHandler;
 import org.apache.ambari.logsearch.common.LogSearchConstants;
+import org.apache.ambari.logsearch.common.LogType;
 import org.apache.ambari.logsearch.common.StatusMessage;
-import org.apache.ambari.logsearch.manager.ServiceLogsManager;
+import org.apache.ambari.logsearch.conf.UIMappingConfig;
+import org.apache.ambari.logsearch.converter.BaseServiceLogRequestQueryConverter;
+import org.apache.ambari.logsearch.converter.ServiceLogTruncatedRequestQueryConverter;
+import org.apache.ambari.logsearch.dao.ServiceLogsSolrDao;
+import org.apache.ambari.logsearch.dao.SolrSchemaFieldDao;
 import org.apache.ambari.logsearch.model.metadata.FieldMetadata;
 import org.apache.ambari.logsearch.model.metadata.ServiceComponentMetadataWrapper;
-import org.apache.ambari.logsearch.model.request.impl.body.ClusterBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.HostLogFilesBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceAnyGraphBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceGraphBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogAggregatedInfoBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogComponentHostBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogComponentLevelBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogExportBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogHostComponentBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogLevelCountBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ServiceLogTruncatedBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.HostLogFilesQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceAnyGraphQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceGraphQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogAggregatedInfoQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogComponentHostQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogComponentLevelQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogExportQueryRequest;
+import org.apache.ambari.logsearch.model.request.impl.HostLogFilesRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceAnyGraphRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceGraphRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogAggregatedInfoRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogComponentHostRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogComponentLevelRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogExportRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogTruncatedRequest;
+import org.apache.ambari.logsearch.model.request.impl.ServiceLogLevelCountRequest;
 import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogHostComponentQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogLevelCountQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogTruncatedQueryRequest;
+import org.apache.ambari.logsearch.model.request.impl.query.ServiceAnyGraphQueryRequest;
 import org.apache.ambari.logsearch.model.response.BarGraphDataListResponse;
 import org.apache.ambari.logsearch.model.response.CountDataListResponse;
 import org.apache.ambari.logsearch.model.response.GraphDataListResponse;
 import org.apache.ambari.logsearch.model.response.GroupListResponse;
 import org.apache.ambari.logsearch.model.response.HostLogFilesResponse;
+import org.apache.ambari.logsearch.model.response.LogData;
+import org.apache.ambari.logsearch.model.response.LogListResponse;
 import org.apache.ambari.logsearch.model.response.NameValueDataListResponse;
 import org.apache.ambari.logsearch.model.response.NodeListResponse;
+import org.apache.ambari.logsearch.model.response.ServiceLogData;
 import org.apache.ambari.logsearch.model.response.ServiceLogResponse;
-import org.springframework.context.annotation.Scope;
+import org.apache.ambari.logsearch.solr.ResponseDataGenerator;
+import org.apache.ambari.logsearch.solr.model.SolrComponentTypeLogData;
+import org.apache.ambari.logsearch.solr.model.SolrHostLogData;
+import org.apache.ambari.logsearch.solr.model.SolrServiceLogData;
+import org.apache.ambari.logsearch.util.DateUtil;
+import org.apache.ambari.logsearch.util.DownloadUtil;
+import org.apache.ambari.logsearch.util.SolrUtil;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.response.FacetField;
+import org.apache.solr.client.solrj.response.FacetField.Count;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.client.solrj.response.UpdateResponse;
+import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.SolrDocumentList;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.query.Criteria;
+import org.springframework.data.solr.core.query.SimpleFacetQuery;
+import org.springframework.data.solr.core.query.SimpleFilterQuery;
+import org.springframework.data.solr.core.query.SimpleQuery;
+import org.springframework.data.solr.core.query.SimpleStringCriteria;
 
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.Authorization;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
-@Api(value = "service/logs", description = "Service log operations", authorizations = {@Authorization(value = "basicAuth")})
-@Path("service/logs")
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+
 @Named
-@Scope("request")
-public class ServiceLogsResource {
+public class ServiceLogsResource extends ManagerBase<ServiceLogData, ServiceLogResponse> {
+  private static final Logger logger = LogManager.getLogger(ServiceLogsManager.class);
+
+  private static final String SERVICE_LOG_TEMPLATE = "service_log_txt.ftl";
 
   @Inject
-  private ServiceLogsManager serviceLogsManager;
+  private ServiceLogsSolrDao serviceLogsSolrDao;
+  @Inject
+  private ResponseDataGenerator responseDataGenerator;
+  @Inject
+  private ConversionService conversionService;
+  @Inject
+  private Configuration freemarkerConfiguration;
+  @Inject
+  private SolrSchemaFieldDao solrSchemaFieldDao;
+  @Inject
+  private UIMappingConfig uiMappingConfig;
+  @Inject
+  private LabelFallbackHandler labelFallbackHandler;
 
-  @GET
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(SEARCH_LOGS_OD)
-  public ServiceLogResponse searchServiceLogsGet(@BeanParam ServiceLogQueryRequest request) {
-    return serviceLogsManager.searchLogs(request);
+  // Dodana metoda getClusters() bez argumentów
+  public List<String> getClusters() {
+    return super.getClusters(serviceLogsSolrDao, CLUSTER, "/service/logs/clusters");
   }
 
-  @POST
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(SEARCH_LOGS_OD)
-  public ServiceLogResponse searchServiceLogsPost(ServiceLogBodyRequest request) {
-    return serviceLogsManager.searchLogs(request);
+  public ServiceLogResponse searchLogs(ServiceLogRequest request) {
+    String event = "/service/logs";
+    String keyword = request.getKeyWord();
+    Boolean isLastPage = request.isLastPage();
+    SimpleQuery solrQuery = conversionService.convert(request, SimpleQuery.class);
+    if (StringUtils.isNotBlank(keyword)) {
+      return (ServiceLogResponse) getPageByKeyword(request, event);
+    } else if (isLastPage) {
+      ServiceLogResponse logResponse = getLastPage(serviceLogsSolrDao, solrQuery, event);
+      if (logResponse == null) {
+        logResponse = new ServiceLogResponse();
+      }
+      return logResponse;
+    } else {
+      ServiceLogResponse response = getLogAsPaginationProvided(solrQuery, serviceLogsSolrDao, event);
+      if (response.getTotal() > 0 && CollectionUtils.isEmpty(response.getLogList())) {
+        request.setLastPage(true);
+        solrQuery = conversionService.convert(request, SimpleQuery.class);
+        ServiceLogResponse lastResponse = getLastPage(serviceLogsSolrDao, solrQuery, event);
+        if (lastResponse != null) {
+          response = lastResponse;
+        }
+      }
+      return response;
+    }
   }
 
-  @DELETE
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(PURGE_LOGS_OD)
-  public StatusMessage deleteServiceLogs(ServiceLogBodyRequest request) {
-    return serviceLogsManager.deleteLogs(request);
+  public GroupListResponse getHosts(String clusters) {
+    return getFields(HOST, clusters, SolrHostLogData.class);
   }
 
-  @GET
-  @Path("/hosts")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOSTS_OD)
-  public GroupListResponse getHostsGet(@QueryParam(LogSearchConstants.REQUEST_PARAM_CLUSTER_NAMES) @Nullable String clusters) {
-    return serviceLogsManager.getHosts(clusters);
+  public GraphDataListResponse getAggregatedInfo(ServiceLogAggregatedInfoRequest request) {
+    SimpleQuery solrDataQuery = new BaseServiceLogRequestQueryConverter().convert(request);
+    SolrQuery solrQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                            .doConstructSolrQuery(solrDataQuery, Object.class);
+    String hierarchy = String.format("%s,%s,%s", HOST, COMPONENT, LEVEL);
+    solrQuery.setQuery("*:*");
+    SolrUtil.setFacetPivot(solrQuery, 1, hierarchy);
+    QueryResponse response = serviceLogsSolrDao.process(solrQuery);
+    return responseDataGenerator.generateSimpleGraphResponse(response, hierarchy);
   }
 
-  @POST
-  @Path("/hosts")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOSTS_OD)
-  public GroupListResponse getHostsPost(@Nullable ClusterBodyRequest clusterBodyRequest) {
-    return serviceLogsManager.getHosts(clusterBodyRequest != null ? clusterBodyRequest.getClusters() : null);
+  private LogListResponse<ServiceLogData> getPageByKeyword(ServiceLogRequest request, String event) {
+    String defaultChoice = "0";
+    String keyword = request.getKeyWord();
+    if (StringUtils.isBlank(keyword)) {
+      throw new MalformedInputException("Keyword was not given");
+    }
+    boolean isNext = !defaultChoice.equals(request.getKeywordType());
+    return getPageForKeywordByType(request, keyword, isNext, event);
   }
 
-  @GET
-  @Path("/components")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENTS_OD)
-  public ServiceComponentMetadataWrapper getComponentsByGet(@QueryParam(LogSearchConstants.REQUEST_PARAM_CLUSTER_NAMES) @Nullable String clusters) {
-    return serviceLogsManager.getComponentMetadata(clusters);
+  private LogListResponse<ServiceLogData> getPageForKeywordByType(ServiceLogRequest request, String keyword, boolean isNext, String event) {
+    String fromDate = request.getFrom();
+    String toDate = request.getTo();
+    boolean timeAscending = LogSearchConstants.ASCENDING_ORDER.equals(request.getSortType());
+
+    int currentPageNumber = Integer.parseInt(request.getPage());
+    int maxRows = Integer.parseInt(request.getPageSize());
+    Date logDate = getDocDateFromNextOrLastPage(request, keyword, isNext, currentPageNumber, maxRows);
+    if (logDate == null) {
+      throw new MalformedInputException(String.format("The keyword \"%s\" was not found", keyword));
+    }
+
+    String nextOrPreviousPageDate = DateUtil.convertDateWithMillisecondsToSolrDate(logDate);
+    SolrServiceLogData firstKeywordLog = getNextHitForKeyword(request, keyword, isNext, event, timeAscending, nextOrPreviousPageDate);
+
+    long keywordSeqNum = firstKeywordLog.getSeqNum();
+    String keywordLogtime = DateUtil.convertDateWithMillisecondsToSolrDate(firstKeywordLog.getLogTime());
+
+    long numberOfDateDuplicates = countNumberOfDuplicates(request, isNext, keywordSeqNum, keywordLogtime);
+
+    long numberOfLogsUntilFound = getNumberOfLogsUntilFound(request, fromDate, toDate, timeAscending, keywordLogtime, numberOfDateDuplicates);
+    int start = (int) ((numberOfLogsUntilFound / maxRows));
+
+    request.setFrom(fromDate);
+    request.setTo(toDate);
+    request.setPage(String.valueOf(start));
+    SolrQuery keywordNextPageQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                                      .doConstructSolrQuery(conversionService.convert(request, SimpleQuery.class), Object.class);
+    return getLogAsPaginationProvided(keywordNextPageQuery, serviceLogsSolrDao, event);
   }
 
-  @POST
-  @Path("/components")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENTS_OD)
-  public ServiceComponentMetadataWrapper getComponentsByPost(@Nullable ClusterBodyRequest clusterBodyRequest) {
-    return serviceLogsManager.getComponentMetadata(clusterBodyRequest != null ? clusterBodyRequest.getClusters() : null);
+  private LogListResponse<ServiceLogData> getLogAsPaginationProvided(SolrQuery solrQuery, ServiceLogsSolrDao solrDao, String event) {
+    QueryResponse response = solrDao.process(solrQuery, event);
+    LogListResponse<ServiceLogData> logResponse = createLogSearchResponse();
+    SolrDocumentList docList = response.getResults();
+    // Ustawienie łącznej liczby dokumentów
+    logResponse.setTotal(docList.getNumFound());
+    List<ServiceLogData> serviceLogDataList = convertToSolrBeans(response);
+    if (!docList.isEmpty()) {
+      logResponse.setLogList(serviceLogDataList);
+      // Zamiast setStart(int) wywołujemy metodę setOffset(int)
+      logResponse.setOffset((int) docList.getStart());
+      Integer rowNumber = solrQuery.getRows();
+      if (rowNumber == null) {
+        logger.error("No RowNumber was set in solrQuery");
+        return createLogSearchResponse();
+      }
+      logResponse.setSize(rowNumber);
+    }
+    return logResponse;
   }
 
-  @GET
-  @Path("/aggregated")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_AGGREGATED_INFO_OD)
-  public GraphDataListResponse getAggregatedInfoGet(@BeanParam ServiceLogAggregatedInfoQueryRequest request) {
-    return serviceLogsManager.getAggregatedInfo(request);
+  private Long getNumberOfLogsUntilFound(ServiceLogRequest request, String fromDate, String toDate, boolean timeAscending,
+                                         String keywordLogtime, long numberOfDateDuplicates) {
+    if (!timeAscending) {
+      request.setTo(toDate);
+      request.setFrom(keywordLogtime);
+    } else {
+      request.setTo(keywordLogtime);
+      request.setFrom(fromDate);
+    }
+    SimpleQuery rangeQuery = conversionService.convert(request, SimpleQuery.class);
+    return serviceLogsSolrDao.count(rangeQuery) - numberOfDateDuplicates;
   }
 
-  @POST
-  @Path("/aggregated")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_AGGREGATED_INFO_OD)
-  public GraphDataListResponse getAggregatedInfoPost(ServiceLogAggregatedInfoBodyRequest request) {
-    return serviceLogsManager.getAggregatedInfo(request);
+  private long countNumberOfDuplicates(ServiceLogRequest request, boolean isNext, long keywordSeqNum, String keywordLogtime) {
+    request.setFrom(keywordLogtime);
+    request.setTo(keywordLogtime);
+    SimpleQuery duplicationsQuery = conversionService.convert(request, SimpleQuery.class);
+    if (isNext) {
+      duplicationsQuery.addFilterQuery(new SimpleFilterQuery(new SimpleStringCriteria(String.format("%s:[* TO %d]", SEQUENCE_ID, keywordSeqNum - 1))));
+    } else {
+      duplicationsQuery.addFilterQuery(new SimpleFilterQuery(new SimpleStringCriteria(String.format("%s:[%d TO *]", SEQUENCE_ID, keywordSeqNum + 1))));
+    }
+    return serviceLogsSolrDao.count(duplicationsQuery);
   }
 
-  @GET
-  @Path("/components/count")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENTS_COUNT_OD)
-  public CountDataListResponse getComponentsCountGet(@QueryParam(LogSearchConstants.REQUEST_PARAM_CLUSTER_NAMES) @Nullable String clusters) {
-    return serviceLogsManager.getComponentsCount(clusters);
+  private SolrServiceLogData getNextHitForKeyword(ServiceLogRequest request, String keyword, boolean isNext, String event, boolean timeAscending, String nextOrPreviousPageDate) {
+    if (hasNextOrAscOrder(isNext, timeAscending)) {
+      request.setTo(nextOrPreviousPageDate);
+    } else {
+      request.setFrom(nextOrPreviousPageDate);
+    }
+    SimpleQuery keywordNextQuery = conversionService.convert(request, SimpleQuery.class);
+    keywordNextQuery.addFilterQuery(new SimpleFilterQuery(new Criteria(KEY_LOG_MESSAGE).contains(keyword)));
+    keywordNextQuery.setRows(1);
+    SolrQuery keywordNextSolrQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                                      .doConstructSolrQuery(keywordNextQuery, Object.class);
+    keywordNextSolrQuery.setStart(0);
+    if (hasNextOrAscOrder(isNext, timeAscending)) {
+      keywordNextSolrQuery.setSort(LOGTIME, SolrQuery.ORDER.desc);
+    } else {
+      keywordNextSolrQuery.setSort(LOGTIME, SolrQuery.ORDER.asc);
+    }
+    keywordNextSolrQuery.addSort(SEQUENCE_ID, SolrQuery.ORDER.desc);
+    QueryResponse queryResponse = serviceLogsSolrDao.process(keywordNextSolrQuery, event);
+    if (queryResponse == null) {
+      throw new NotFoundException(String.format("The keyword \"%s\" was not found", keyword));
+    }
+    List<SolrServiceLogData> solrServiceLogDataList = queryResponse.getBeans(SolrServiceLogData.class);
+    if (!CollectionUtils.isNotEmpty(solrServiceLogDataList)) {
+      throw new NotFoundException(String.format("The keyword \"%s\" was not found", keyword));
+    }
+    return solrServiceLogDataList.get(0);
   }
 
-  @POST
-  @Path("/components/count")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENTS_COUNT_OD)
-  public CountDataListResponse getComponentsCountPost(@Nullable ClusterBodyRequest clusterBodyRequest) {
-    return serviceLogsManager.getComponentsCount(clusterBodyRequest != null ? clusterBodyRequest.getClusters() : null);
+  private Date getDocDateFromNextOrLastPage(ServiceLogRequest request, String keyword, boolean isNext, int currentPageNumber, int maxRows) {
+    int lastOrFirstLogIndex;
+    if (isNext) {
+      lastOrFirstLogIndex = ((currentPageNumber + 1) * maxRows);
+    } else {
+      if (currentPageNumber == 0) {
+        throw new NotFoundException("This is the first Page");
+      }
+      lastOrFirstLogIndex = (currentPageNumber * maxRows) - 1;
+    }
+    SimpleQuery sq = conversionService.convert(request, SimpleQuery.class);
+    SolrQuery nextPageLogTimeQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                                     .doConstructSolrQuery(sq, Object.class);
+    nextPageLogTimeQuery.remove("start");
+    nextPageLogTimeQuery.remove("rows");
+    nextPageLogTimeQuery.setStart(lastOrFirstLogIndex);
+    nextPageLogTimeQuery.setRows(1);
+
+    QueryResponse queryResponse = serviceLogsSolrDao.process(nextPageLogTimeQuery);
+    if (queryResponse == null) {
+      throw new MalformedInputException(String.format("Cannot process next page query for \"%s\" ", keyword));
+    }
+    SolrDocumentList docList = queryResponse.getResults();
+    if (docList == null || docList.isEmpty()) {
+      throw new MalformedInputException(String.format("Next page element for \"%s\" is not found", keyword));
+    }
+
+    SolrDocument solrDoc = docList.get(0);
+    return (Date) solrDoc.get(LOGTIME);
   }
 
-  @GET
-  @Path("/hosts/count")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOSTS_COUNT_OD)
-  public CountDataListResponse getHostsCountGet(@QueryParam(LogSearchConstants.REQUEST_PARAM_CLUSTER_NAMES) @Nullable String clusters) {
-    return serviceLogsManager.getHostsCount(clusters);
+  private boolean hasNextOrAscOrder(boolean isNext, boolean timeAscending) {
+    return isNext && !timeAscending || !isNext && timeAscending;
   }
 
-  @POST
-  @Path("/hosts/count")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOSTS_COUNT_OD)
-  public CountDataListResponse getHostsCountPost(@Nullable ClusterBodyRequest clusterBodyRequest) {
-    return serviceLogsManager.getHostsCount(clusterBodyRequest != null ? clusterBodyRequest.getClusters() : null);
+  public Response export(ServiceLogExportRequest request) {
+    String defaultFormat = "txt";
+    SimpleQuery solrQuery = conversionService.convert(request, SimpleQuery.class);
+    String format = request.getFormat() != null && defaultFormat.equalsIgnoreCase(request.getFormat()) ? ".txt" : ".json";
+    DateTimeFormatter fileNameFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+    String fileName = "Component_Logs_" + fileNameFormat.format(LocalDateTime.now());
+
+    try {
+      QueryResponse response = serviceLogsSolrDao.process(solrQuery);
+      SolrDocumentList docList = response.getResults();
+      String textToSave;
+
+      if (".txt".equals(format.toLowerCase(Locale.ENGLISH))) {
+        String utcOffset = StringUtils.isBlank(request.getUtcOffset()) ? "+0" : request.getUtcOffset();
+        DateTimeFormatter inputDateFormat = DateTimeFormatter.ofPattern(LogSearchConstants.SOLR_DATE_FORMAT_PREFIX_Z);
+        DateTimeFormatter outputDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSSX");
+        OffsetDateTime from = LocalDateTime.parse(request.getFrom(), inputDateFormat).atOffset(ZoneOffset.of(utcOffset));
+        OffsetDateTime to = LocalDateTime.parse(request.getTo(), inputDateFormat).atOffset(ZoneOffset.of(utcOffset));
+
+        Template template = freemarkerConfiguration.getTemplate(SERVICE_LOG_TEMPLATE);
+        Map<String, Object> models = new HashMap<>();
+        DownloadUtil.fillModelsForLogFile(docList, models, request, format, outputDateFormat.format(from), outputDateFormat.format(to));
+        StringWriter stringWriter = new StringWriter();
+        template.process(models, stringWriter);
+        textToSave = stringWriter.toString();
+      } else if (".json".equals(format.toLowerCase(Locale.ENGLISH))) {
+        textToSave = convertObjToString(docList);
+      } else {
+        throw new UnsupportedFormatException(String.format("Unsupported format %s Either should be json or text", format.toLowerCase(Locale.ENGLISH)));
+      }
+      File file = File.createTempFile(fileName, format);
+      try (FileOutputStream fis = new FileOutputStream(file)) {
+        fis.write(textToSave.getBytes());
+      }
+      return Response
+        .ok(file, MediaType.APPLICATION_OCTET_STREAM)
+        .header("Content-Disposition", "attachment;filename=" + fileName + format)
+        .build();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } catch (TemplateException e) {
+      throw new RuntimeException("Error while rendering freemarker template!", e);
+    }
   }
 
-  @GET
-  @Path("/tree")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_TREE_EXTENSION_OD)
-  public NodeListResponse getTreeExtensionGet(@BeanParam ServiceLogHostComponentQueryRequest request) {
-    return serviceLogsManager.getTreeExtension(request);
+  public NodeListResponse getComponentListWithLevelCounts(ServiceLogComponentLevelRequest request) {
+    SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
+    SolrQuery solrQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                           .doConstructSolrQuery(facetQuery, Object.class);
+    solrQuery.setFacetSort(StringUtils.isEmpty(request.getSortBy()) ? COMPONENT : request.getSortBy());
+    QueryResponse response = serviceLogsSolrDao.process(facetQuery, "/service/logs/components/levels/counts");
+    return responseDataGenerator.generateOneLevelServiceNodeTree(response, String.format("%s,%s", COMPONENT, LEVEL));
   }
 
-  @POST
-  @Path("/tree")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_TREE_EXTENSION_OD)
-  public NodeListResponse getTreeExtensionPost(ServiceLogHostComponentBodyRequest request) {
-    return serviceLogsManager.getTreeExtension(request);
+  public NodeListResponse getHostListByComponent(ServiceLogComponentHostRequest request) {
+    SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
+    SolrQuery solrQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                           .doConstructSolrQuery(conversionService.convert(request, SimpleQuery.class), Object.class);
+    solrQuery.setFacetSort(request.getSortBy() == null ? HOST : request.getSortBy());
+
+    NodeListResponse list = new NodeListResponse();
+    String componentName = request.getComponentName() == null ? "" : request.getComponentName();
+    if (StringUtils.isNotBlank(componentName)) {
+      solrQuery.addFilterQuery(COMPONENT + ":" + componentName);
+      QueryResponse response = serviceLogsSolrDao.process(solrQuery, "/service/logs/hosts/components");
+      String firstHierarchy = String.format("%s,%s,%s", COMPONENT, HOST, LEVEL);
+      String secondHierarchy = String.format("%s,%s", COMPONENT, LEVEL);
+      return responseDataGenerator.generateServiceNodeTreeFromFacetResponse(response, firstHierarchy, secondHierarchy,
+          LogSearchConstants.COMPONENT, LogSearchConstants.HOST);
+    } else {
+      return list;
+    }
   }
 
-  @GET
-  @Path("/levels/counts")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_LOG_LEVELS_COUNT_OD)
-  public NameValueDataListResponse getLogsLevelCountGet(@BeanParam ServiceLogLevelCountQueryRequest request) {
-    return serviceLogsManager.getLogsLevelCount(request);
+  public NameValueDataListResponse getLogsLevelCount(ServiceLogLevelCountRequest request) {
+    SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
+    QueryResponse response = serviceLogsSolrDao.process(facetQuery, "/service/logs/levels/counts");
+    return responseDataGenerator.getNameValueDataListResponseWithDefaults(response, LogSearchConstants.SUPPORTED_LOG_LEVELS, false);
   }
 
-  @POST
-  @Path("/levels/counts")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_LOG_LEVELS_COUNT_OD)
-  public NameValueDataListResponse getLogsLevelCountPost(ServiceLogLevelCountBodyRequest request) {
-    return serviceLogsManager.getLogsLevelCount(request);
+  public BarGraphDataListResponse getHistogramData(ServiceGraphRequest request) {
+    SolrQuery solrQuery = conversionService.convert(request, SolrQuery.class);
+    QueryResponse response = serviceLogsSolrDao.process(solrQuery, "/service/logs/histogram");
+    return responseDataGenerator.generateBarGraphDataResponseWithRanges(response, LEVEL, true);
   }
 
-  @GET
-  @Path("/histogram")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HISTOGRAM_DATA_OD)
-  public BarGraphDataListResponse getHistogramDataGet(@BeanParam ServiceGraphQueryRequest request) {
-    return serviceLogsManager.getHistogramData(request);
+  public ServiceLogResponse getAfterBeforeLogs(ServiceLogTruncatedRequest request) {
+    ServiceLogResponse logResponse = new ServiceLogResponse();
+    List<ServiceLogData> docList;
+    String scrollType = request.getScrollType() != null ? request.getScrollType() : "";
+
+    String logTime = null;
+    String sequenceId = null;
+    SolrQuery solrQuery = new SolrQuery();
+    solrQuery.setQuery("*:*");
+    solrQuery.setRows(1);
+    solrQuery.addFilterQuery(String.format("%s:%s", ID, request.getId()));
+    QueryResponse response = serviceLogsSolrDao.process(solrQuery);
+    if (response == null) {
+      return logResponse;
+    }
+    docList = convertToSolrBeans(response);
+    if (docList != null && !docList.isEmpty()) {
+      Date date = docList.get(0).getLogTime();
+      logTime = DateUtil.convertDateWithMillisecondsToSolrDate(date);
+      sequenceId = docList.get(0).getSeqNum().toString();
+    }
+    if (StringUtils.isBlank(logTime)) {
+      return logResponse;
+    }
+    if (LogSearchConstants.SCROLL_TYPE_BEFORE.equals(scrollType) || LogSearchConstants.SCROLL_TYPE_AFTER.equals(scrollType)) {
+      ServiceLogResponse beforeAfterResponse = whenScroll(request, logTime, sequenceId, scrollType);
+      if (beforeAfterResponse.getLogList() == null) {
+        return logResponse;
+      }
+      List<ServiceLogData> solrDocList = new ArrayList<>(beforeAfterResponse.getLogList());
+      logResponse.setLogList(solrDocList);
+      return logResponse;
+    } else {
+      logResponse = new ServiceLogResponse();
+      List<ServiceLogData> initial = new ArrayList<>();
+      List<ServiceLogData> before = whenScroll(request, logTime, sequenceId, LogSearchConstants.SCROLL_TYPE_BEFORE).getLogList();
+      List<ServiceLogData> after = whenScroll(request, logTime, sequenceId, LogSearchConstants.SCROLL_TYPE_AFTER).getLogList();
+      if (before != null && !before.isEmpty()) {
+        initial.addAll(Lists.reverse(before));
+      }
+      initial.add(docList.get(0));
+      if (after != null && !after.isEmpty()) {
+        initial.addAll(after);
+      }
+      logResponse.setLogList(initial);
+      return logResponse;
+    }
   }
 
-  @POST
-  @Path("/histogram")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HISTOGRAM_DATA_OD)
-  public BarGraphDataListResponse getHistogramDataPost(ServiceGraphBodyRequest request) {
-    return serviceLogsManager.getHistogramData(request);
+  private ServiceLogResponse whenScroll(ServiceLogTruncatedRequest request, String logTime, String sequenceId, String afterOrBefore) {
+    request.setScrollType(afterOrBefore);
+    ServiceLogTruncatedRequestQueryConverter converter = new ServiceLogTruncatedRequestQueryConverter();
+    converter.setLogTime(logTime);
+    converter.setSequenceId(sequenceId);
+    return getLogAsPaginationProvided(converter.convert(request), serviceLogsSolrDao, "service/logs/truncated");
   }
 
-
-  @GET
-  @Path("/export")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(EXPORT_TO_TEXT_FILE_OD)
-  public Response exportToTextFileGet(@BeanParam ServiceLogExportQueryRequest request) {
-    return serviceLogsManager.export(request);
+  @Override
+  protected List<ServiceLogData> convertToSolrBeans(QueryResponse response) {
+    return new ArrayList<>(response.getBeans(SolrServiceLogData.class));
   }
 
-  @POST
-  @Path("/export")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(EXPORT_TO_TEXT_FILE_OD)
-  public Response exportToTextFilePost(ServiceLogExportBodyRequest request) {
-    return serviceLogsManager.export(request);
+  @Override
+  protected ServiceLogResponse createLogSearchResponse() {
+    return new ServiceLogResponse();
   }
 
-  @GET
-  @Path("/hosts/components")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOST_LIST_BY_COMPONENT_OD)
-  public NodeListResponse getHostListByComponentGet(@BeanParam ServiceLogComponentHostQueryRequest request) {
-    return serviceLogsManager.getHostListByComponent(request);
+  // ===============================
+  // Metody wymagane przez zasób REST
+  // ===============================
+
+  public CountDataListResponse getComponentsCount(String clusters) {
+    SimpleFacetQuery facetQuery = conversionService.convert(COMPONENT, SimpleFacetQuery.class);
+    if (StringUtils.isNotEmpty(clusters)) {
+      facetQuery.addFilterQuery(new SimpleFilterQuery(new Criteria(CLUSTER)
+                                 .in(Splitter.on(",").splitToList(clusters))));
+    }
+    QueryResponse response = serviceLogsSolrDao.process(facetQuery, "/service/logs/components/counts");
+    return responseDataGenerator.generateCountResponseByField(response, COMPONENT);
   }
 
-  @POST
-  @Path("/hosts/components")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOST_LIST_BY_COMPONENT_OD)
-  public NodeListResponse getHostListByComponentPost(ServiceLogComponentHostBodyRequest request) {
-    return serviceLogsManager.getHostListByComponent(request);
+  public CountDataListResponse getHostsCount(String clusters) {
+    SimpleFacetQuery facetQuery = conversionService.convert(HOST, SimpleFacetQuery.class);
+    if (StringUtils.isNotEmpty(clusters)) {
+      facetQuery.addFilterQuery(new SimpleFilterQuery(new Criteria(CLUSTER)
+                                 .in(Splitter.on(",").splitToList(clusters))));
+    }
+    QueryResponse response = serviceLogsSolrDao.process(facetQuery, "/service/logs/hosts/counts");
+    return responseDataGenerator.generateCountResponseByField(response, HOST);
   }
 
-  @GET
-  @Path("/components/levels/counts")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENT_LIST_WITH_LEVEL_COUNT_OD)
-  public NodeListResponse getComponentListWithLevelCountsGet(@BeanParam ServiceLogComponentLevelQueryRequest request) {
-    return serviceLogsManager.getComponentListWithLevelCounts(request);
+  public NodeListResponse getTreeExtension(ServiceLogHostComponentQueryRequest request) {
+    SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
+    SolrQuery solrQuery = new DefaultQueryParser(serviceLogsSolrDao.getSolrTemplate().getConverter().getMappingContext())
+                           .doConstructSolrQuery(facetQuery, Object.class);
+    solrQuery.setFacet(true);
+    solrQuery.set("facet.pivot", HOST + "," + COMPONENT + "," + LEVEL);
+    QueryResponse response = serviceLogsSolrDao.process(solrQuery, "/service/logs/tree");
+    String firstHierarchy = String.format("%s,%s,%s", HOST, COMPONENT, LEVEL);
+    String secondHierarchy = String.format("%s,%s", HOST, LEVEL);
+    return responseDataGenerator.generateServiceNodeTreeFromFacetResponse(response, firstHierarchy, secondHierarchy, CLUSTER, COMPONENT);
   }
 
-  @POST
-  @Path("/components/levels/counts")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_COMPONENT_LIST_WITH_LEVEL_COUNT_OD)
-  public NodeListResponse getComponentListWithLevelCountsPost(ServiceLogComponentLevelBodyRequest request) {
-    return serviceLogsManager.getComponentListWithLevelCounts(request);
+  public List<FieldMetadata> getServiceLogsSchemaFieldsName() {
+    Map<String, String> schemaFieldsMap = solrSchemaFieldDao.getSchemaFieldNameMap(LogType.SERVICE);
+    return schemaFieldsMap.entrySet().stream()
+      .filter(e -> !uiMappingConfig.getServiceFieldExcludeList().contains(e.getKey()))
+      .map(e -> new FieldMetadata(
+          e.getKey(),
+          labelFallbackHandler.fallbackIfRequired(
+              e.getKey(),
+              uiMappingConfig.getServiceFieldLabels().get(e.getKey()),
+              true, false, true,
+              uiMappingConfig.getServiceFieldFallbackPrefixes(),
+              uiMappingConfig.getServiceFieldFallbackSuffixes()),
+          !uiMappingConfig.getServiceFieldFilterableExcludesList().contains(e.getKey()),
+          uiMappingConfig.getServiceFieldVisibleList().contains(e.getKey())))
+      .collect(Collectors.toList());
   }
 
-  @GET
-  @Path("/schema/fields")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_SERVICE_LOGS_SCHEMA_FIELD_NAME_OD)
-  public List<FieldMetadata> getServiceLogsSchemaFieldsNameGet() {
-    return serviceLogsManager.getServiceLogsSchemaFieldsName();
+  public BarGraphDataListResponse getAnyGraphCountData(ServiceAnyGraphQueryRequest request) {
+    SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
+    QueryResponse queryResponse = serviceLogsSolrDao.process(facetQuery, "/service/logs/anygraph/counts");
+    return responseDataGenerator.getGraphDataWithDefaults(queryResponse, LEVEL, LogSearchConstants.SUPPORTED_LOG_LEVELS);
   }
 
-  @POST
-  @Path("/schema/fields")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_SERVICE_LOGS_SCHEMA_FIELD_NAME_OD)
-  public List<FieldMetadata> getServiceLogsSchemaFieldsNamePost() {
-    return serviceLogsManager.getServiceLogsSchemaFieldsName();
+  // Dodana metoda getFields
+  private <T extends LogData> GroupListResponse getFields(String field, String clusters, Class<T> clazz) {
+    SolrQuery solrQuery = new SolrQuery();
+    solrQuery.setQuery("*:*");
+    SolrUtil.addListFilterToSolrQuery(solrQuery, CLUSTER, clusters);
+    GroupListResponse collection = new GroupListResponse();
+    SolrUtil.setFacetField(solrQuery, field);
+    SolrUtil.setFacetSort(solrQuery, LogSearchConstants.FACET_INDEX);
+    QueryResponse response = serviceLogsSolrDao.process(solrQuery);
+    if (response == null) {
+      return collection;
+    }
+    FacetField facetField = response.getFacetField(field);
+    if (facetField == null) {
+      return collection;
+    }
+    List<Count> fieldList = facetField.getValues();
+    if (fieldList == null) {
+      return collection;
+    }
+    SolrDocumentList docList = response.getResults();
+    if (docList == null) {
+      return collection;
+    }
+    List<LogData> groupList = new ArrayList<>(getLogDataListByFieldType(clazz, response, fieldList));
+
+    collection.setGroupList(groupList);
+    if (!docList.isEmpty()) {
+      collection.setStartIndex((int) docList.getStart());
+      collection.setTotalCount(docList.getNumFound());
+    }
+    return collection;
   }
 
-  @GET
-  @Path("/count/anygraph")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_ANY_GRAPH_COUNT_DATA_OD)
-  public BarGraphDataListResponse getAnyGraphCountDataGet(@BeanParam ServiceAnyGraphQueryRequest request) {
-    return serviceLogsManager.getAnyGraphCountData(request);
+  // Dodana metoda getLogDataListByFieldType
+  private <T extends LogData> List<T> getLogDataListByFieldType(Class<T> clazz, QueryResponse response, List<Count> fieldList) {
+    List<T> groupList = getComponentBeans(clazz, response);
+    for (Count cnt : fieldList) {
+      T logData = createNewFieldByType(clazz, cnt);
+      groupList.add(logData);
+    }
+    return groupList;
   }
 
-  @POST
-  @Path("/count/anygraph")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_ANY_GRAPH_COUNT_DATA_OD)
-  public BarGraphDataListResponse getAnyGraphCountDataPost(ServiceAnyGraphBodyRequest request) {
-    return serviceLogsManager.getAnyGraphCountData(request);
+  // Dodana metoda getComponentBeans
+  private <T extends LogData> List<T> getComponentBeans(Class<T> clazz, QueryResponse response) {
+    if (clazz.isAssignableFrom(SolrHostLogData.class) || clazz.isAssignableFrom(SolrComponentTypeLogData.class)) {
+      return response.getBeans(clazz);
+    } else {
+      throw new UnsupportedOperationException();
+    }
   }
 
-  @GET
-  @Path("/truncated")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_AFTER_BEFORE_LOGS_OD)
-  public ServiceLogResponse getAfterBeforeLogsByGet(@BeanParam ServiceLogTruncatedQueryRequest request) {
-    return serviceLogsManager.getAfterBeforeLogs(request);
+  // Dodana metoda createNewFieldByType
+  @SuppressWarnings("unchecked")
+  private <T extends LogData> T createNewFieldByType(Class<T> clazz, Count count) {
+    String temp = count.getName();
+    LogData result;
+    if (clazz.equals(SolrHostLogData.class)) {
+      result = new SolrHostLogData();
+      ((SolrHostLogData)result).setHost(temp);
+    } else if (clazz.equals(SolrComponentTypeLogData.class)) {
+      result = new SolrComponentTypeLogData();
+      ((SolrComponentTypeLogData)result).setType(temp);
+    } else {
+      throw new UnsupportedOperationException();
+    }
+    
+    return (T)result;
   }
-
-  @POST
-  @Path("/truncated")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_AFTER_BEFORE_LOGS_OD)
-  public ServiceLogResponse getAfterBeforeLogsByPost(ServiceLogTruncatedBodyRequest request) {
-    return serviceLogsManager.getAfterBeforeLogs(request);
-  }
-
-  @GET
-  @Path("/request/cancel")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(REQUEST_CANCEL)
-  public String cancelRequestGet() {
-    // TODO: create function that cancels an ongoing solr request
-    return "{\"endpoint status\": \"not supported yet\"}";
-  }
-
-  @POST
-  @Path("/request/cancel")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(REQUEST_CANCEL)
-  public String cancelRequestPost() {
-    // TODO: create function that cancels an ongoing solr request
-    return "{\"endpoint status\": \"not supported yet\"}";
-  }
-
-  @GET
-  @Path("/files")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOST_LOGFILES_OD)
-  @ValidateOnExecution
-  public HostLogFilesResponse getHostLogFilesByGet(@Valid @BeanParam HostLogFilesQueryRequest request) {
-    return serviceLogsManager.getHostLogFileData(request);
-  }
-
-  @POST
-  @Path("/files")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_HOST_LOGFILES_OD)
-  @ValidateOnExecution
-  public HostLogFilesResponse getHostLogFilesByPost(@Valid @BeanParam HostLogFilesBodyRequest request) {
-    return serviceLogsManager.getHostLogFileData(request);
-  }
-
-  @GET
-  @Path("/clusters")
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_SERVICE_CLUSTERS_OD)
-  public List<String> getClustersForServiceLogGet() {
-    return serviceLogsManager.getClusters();
-  }
-
-  @POST
-  @Path("/clusters")
-  @Consumes({MediaType.APPLICATION_JSON})
-  @Produces({MediaType.APPLICATION_JSON})
-  @ApiOperation(GET_SERVICE_CLUSTERS_OD)
-  public List<String> getClustersForServiceLogPost() {
-    return serviceLogsManager.getClusters();
-  }
-
 }

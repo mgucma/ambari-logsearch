@@ -22,6 +22,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
 import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
@@ -40,7 +41,8 @@ public class StringFieldFacetQueryConverterTest extends AbstractRequestConverter
     String field = "myfield";
     // WHEN
     SimpleQuery simpleQuery = underTest.convert(field);
-    SolrQuery queryResult = new DefaultQueryParser().doConstructSolrQuery(simpleQuery);
+    SolrQuery queryResult = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(simpleQuery, SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&facet=true&facet.mincount=1&facet.limit=-1&facet.field=myfield",
       queryResult.toQueryString());

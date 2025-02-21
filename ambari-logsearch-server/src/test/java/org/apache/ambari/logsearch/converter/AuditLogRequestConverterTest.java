@@ -24,6 +24,7 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
 import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
@@ -45,7 +46,8 @@ public class AuditLogRequestConverterTest extends AbstractRequestConverterTest {
     request.setUserList("joe,steven");
     // WHEN
     SimpleQuery simpleQuery = underTest.convert(request);
-    SolrQuery queryResult = new DefaultQueryParser().doConstructSolrQuery(simpleQuery);
+    SolrQuery queryResult = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(simpleQuery, SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&start=0&rows=25&fq=repo%3A%28logsearch_app+%22OR%22+secure_log%29&fq=-repo%3A%28hst_agent+%22OR%22+system_message%29" +
         "&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage&fq=cluster%3Acl1&fq=reqUser%3A%28joe+%22OR%22+steven%29&sort=evtTime+desc%2Cseq_num+desc",
@@ -58,9 +60,9 @@ public class AuditLogRequestConverterTest extends AbstractRequestConverterTest {
     AuditLogRequest request = new AuditLogQueryRequest();
     // WHEN
     SimpleQuery simpleQuery = underTest.convert(request);
-    SolrQuery queryResult = new DefaultQueryParser().doConstructSolrQuery(simpleQuery);
+    SolrQuery queryResult = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(simpleQuery, SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&start=0&rows=99999&sort=evtTime+desc%2Cseq_num+desc", queryResult.toQueryString());
   }
-
 }

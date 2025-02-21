@@ -1,20 +1,15 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
  * http://www.apache.org/licenses/LICENSE-2.0
  * 
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations under the License.
  */
 package org.apache.ambari.logsearch.auth.filter;
 
@@ -55,6 +50,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,12 +82,26 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
         .setSigningKey(parseRSAPublicKey(getPublicKey()))
         .parseClaimsJws(getJWTFromCookie(request))
         .getBody();
-      String userName  = claims.getSubject();
+
+      // Weryfikacja audiencji – pobieramy claim "aud" i obsługujemy zarówno String, jak i Listę
+      Object audClaim = claims.get("aud");
+      if (audClaim != null) {
+        List<String> tokenAudiences;
+        if (audClaim instanceof String) {
+          tokenAudiences = Collections.singletonList((String) audClaim);
+        } else if (audClaim instanceof List) {
+          tokenAudiences = (List<String>) audClaim;
+        } else {
+          throw new IllegalArgumentException("Audience claim is not of expected type");
+        }
+        if (tokenAudiences.isEmpty() || Collections.disjoint(getAudiences(), tokenAudiences)) {
+          throw new IllegalArgumentException(String.format("Audience validation failed. (Not found: %s)", tokenAudiences));
+        }
+      }
+
+      String userName = claims.getSubject();
       logger.info("USERNAME: " + userName);
       logger.info("URL = " + request.getRequestURL());
-      if (StringUtils.isNotEmpty(claims.getAudience()) && !getAudiences().contains(claims.getAudience())) {
-        throw new IllegalArgumentException(String.format("Audience validation failed. (Not found: %s)", claims.getAudience()));
-      }
       Authentication authentication = new JWTAuthenticationToken(userName, getPublicKey(), getAuthorities(userName));
       authentication.setAuthenticated(true);
       SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -119,7 +129,6 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
     String ajaxRequestHeader = request.getHeader("X-Requested-With");
     if (isWebUserAgent(request.getHeader("User-Agent")) && !"XMLHttpRequest".equals(ajaxRequestHeader)) {
       chain.doFilter(request, response);
-      //response.sendRedirect(createForwardableURL(request) + getOriginalQueryString(request));
     }
   }
 
@@ -128,7 +137,7 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
     super.unsuccessfulAuthentication(request, response, failed);
     String ajaxRequestHeader = request.getHeader("X-Requested-With");
     String loginUrl = constructLoginURL(request);
-    if (loginUrl.endsWith("?doAs=anonymous")) { // HACK! - use proper solution, investigate which filter changes ? to &
+    if (loginUrl.endsWith("?doAs=anonymous")) {
       loginUrl = StringUtils.removeEnd(loginUrl, "?doAs=anonymous");
     }
     if (!isWebUserAgent(request.getHeader("User-Agent")) || "XMLHttpRequest".equals(ajaxRequestHeader)) {
@@ -136,7 +145,7 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
       mapObj.put("knoxssoredirectURL", URLEncoder.encode(loginUrl, "UTF-8"));
       response.setContentType("application/json");
       response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      response.sendError(HttpServletResponse.SC_UNAUTHORIZED,  new Gson().toJson(mapObj));
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, new Gson().toJson(mapObj));
     } else {
       response.sendRedirect(loginUrl);
     }
@@ -160,7 +169,7 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
   private boolean isWebUserAgent(String userAgent) {
     boolean isWeb = false;
     List<String> userAgentList = getUserAgentList();
-    if (userAgentList != null && userAgentList.size() > 0) {
+    if (userAgentList != null && !userAgentList.isEmpty()) {
       for (String ua : userAgentList) {
         if (StringUtils.startsWithIgnoreCase(userAgent, ua)) {
           isWeb = true;
@@ -176,14 +185,12 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
     try {
       CertificateFactory fact = CertificateFactory.getInstance("X.509");
       ByteArrayInputStream is = new ByteArrayInputStream(fullPem.getBytes("UTF8"));
-
       X509Certificate cer = (X509Certificate) fact.generateCertificate(is);
       return (RSAPublicKey) cer.getPublicKey();
     } catch (CertificateException ce) {
       String message;
       if (pem.startsWith(PEM_HEADER)) {
-        message = "CertificateException - be sure not to include PEM header "
-          + "and footer in the PEM configuration element.";
+        message = "CertificateException - be sure not to include PEM header and footer in the PEM configuration element.";
       } else {
         message = "CertificateException - PEM may be corrupt";
       }
@@ -215,10 +222,9 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
         builder.setScheme(xForwardedProto)
           .setHost(xForwardedHost)
           .setPath(xForwardedContext + PROXY_LOGSEARCH_URL_PATH + request.getRequestURI());
-
         return builder.build().toString();
       } catch (URISyntaxException ue) {
-        logger.error("URISyntaxException while build xforward url ", ue);
+        logger.error("URISyntaxException while building x-forward URL", ue);
         return request.getRequestURL().toString();
       }
     } else {
@@ -250,5 +256,4 @@ public abstract class AbstractJWTFilter extends AbstractAuthenticationProcessing
   protected abstract Collection<? extends GrantedAuthority> getAuthorities(String username);
 
   protected abstract List<String> getUserAgentList();
-
 }

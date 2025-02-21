@@ -23,17 +23,24 @@ import org.apache.ambari.logsearch.model.request.impl.query.TopFieldAuditLogQuer
 import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.mapping.SolrPersistentEntity;
+import org.springframework.data.solr.core.mapping.SolrPersistentProperty;
 
 import static org.junit.Assert.assertEquals;
 
 public class TopFieldAuditLogRequestQueryConverterTest extends AbstractRequestConverterTest {
 
   private TopFieldAuditLogRequestQueryConverter underTest;
+  private DefaultQueryParser queryParser;
 
   @Before
   public void setUp() {
     underTest = new TopFieldAuditLogRequestQueryConverter();
+    MappingContext<? extends SolrPersistentEntity<?>, SolrPersistentProperty> mappingContext = new SimpleSolrMappingContext();
+    queryParser = new DefaultQueryParser(mappingContext);
   }
 
   @Test
@@ -44,7 +51,7 @@ public class TopFieldAuditLogRequestQueryConverterTest extends AbstractRequestCo
     request.setTop(10);
     request.setField("myfield");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = queryParser.doConstructSolrQuery(underTest.convert(request), Object.class); // Dodano Object.class jako drugi argument
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=evtTime%3A%5B2016-09-13T22%3A00%3A01.000Z+TO+2016-09-14T22%3A00%3A01.000Z%5D" +
         "&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage&fq=repo%3A%28logsearch_app+%22OR%22+secure_log%29" +
@@ -57,6 +64,6 @@ public class TopFieldAuditLogRequestQueryConverterTest extends AbstractRequestCo
     // GIVEN
     TopFieldAuditLogRequest request = new TopFieldAuditLogQueryRequest();
     // WHEN
-    new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    queryParser.doConstructSolrQuery(underTest.convert(request), Object.class); // Dodano Object.class jako drugi argument
   }
 }

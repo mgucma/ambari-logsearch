@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-   Licensed to the Apache Software Foundation (ASF) under one or more
-   contributor license agreements.  See the NOTICE file distributed with
+   Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file distributed with
    this work for additional information regarding copyright ownership.
    The ASF licenses this file to You under the Apache License, Version 2.0
    (the "License"); you may not use this file except in compliance with
@@ -35,34 +35,79 @@
     <it.skip>true</it.skip>
     <jbehave.version>4.0.5</jbehave.version>
     <jbehave-selenium>3.5.5</jbehave-selenium>
-    <!-- Ustawiamy wersję Jersey na 2.23.1, by pobierała Jetty 9.4.x -->
-    <jersey.version>2.23.1</jersey.version>
-    <jackson-jaxrs.version>2.9.4</jackson-jaxrs.version>
+    <!-- Ustawiamy wersję Jersey na 2.35.1 (nie 3.x), aby uniknąć błędów HK2 -->
+    <jersey.version>3.1.2</jersey.version>
+    <!-- Ujednolicamy wersje Jacksona do 2.18.2 -->
+    <jackson.version>2.18.2</jackson.version>
+    <!-- Aktualizujemy jackson-jaxrs-json-provider do wersji ${jackson.version} -->
+    <jackson-jaxrs.version>${jackson.version}</jackson-jaxrs.version>
     <failsafe-plugin.version>2.20</failsafe-plugin.version>
     <forkCount>1</forkCount>
     <logsearch.docker.host>localhost</logsearch.docker.host>
     <backend.stories.location>NONE</backend.stories.location>
     <ui.stories.location>NONE</ui.stories.location>
-    <!-- Zakładamy, że ${solr.version} odpowiada wersji 9.8.0 -->
+    <!-- Ustawiamy wersję Solr na 9.8.0 -->
+    <solr.version>9.8.0</solr.version>
   </properties>
 
-  <!-- Wymuszenie spójnych wersji bibliotek Jetty (wersje 9.4.57.v20241219) -->
+  <!-- Wymuszenie spójnych wersji bibliotek Jetty (używamy wersji 10.0.22, zgodnej z Solr 9.8.0) -->
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-http</artifactId>
-        <version>9.4.57.v20241219</version>
+        <version>10.0.22</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-io</artifactId>
-        <version>9.4.57.v20241219</version>
+        <version>10.0.22</version>
       </dependency>
       <dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-util</artifactId>
-        <version>9.4.57.v20241219</version>
+        <version>10.0.22</version>
+      </dependency>
+      <!-- Wymuszamy spójną wersję Jacksona -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-annotations</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-xml</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-yaml</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.dataformat</groupId>
+        <artifactId>jackson-dataformat-smile</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.jaxrs</groupId>
+        <artifactId>jackson-jaxrs-json-provider</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>2.4</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -73,6 +118,12 @@
       <artifactId>jbehave-core</artifactId>
       <version>${jbehave.version}</version>
     </dependency>
+    <dependency>
+       <groupId>org.glassfish.jersey.core</groupId>
+       <artifactId>jersey-common</artifactId>
+       <version>${jersey.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.jbehave.web</groupId>
       <artifactId>jbehave-web-selenium</artifactId>
@@ -110,20 +161,34 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- Usunięto dependency solr-dataimporthandler -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+       <groupId>org.junit.jupiter</groupId>
+       <artifactId>junit-jupiter-api</artifactId>
+       <version>5.10.0</version> <!-- Upewnij się, że używasz najnowszej wersji -->
+       <scope>test</scope>
+    </dependency>
+    <dependency>
+       <groupId>org.junit.jupiter</groupId>
+       <artifactId>junit-jupiter-engine</artifactId>
+       <version>5.10.0</version> <!-- Upewnij się, że używasz najnowszej wersji -->
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+       <groupId>org.junit.jupiter</groupId>
+       <artifactId>junit-jupiter-params</artifactId>
+       <version>5.10.0</version> <!-- Upewnij się, że używasz najnowszej wersji -->
+       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
       <version>2.5</version>
     </dependency>
+    <!-- Uaktualniamy jackson-jaxrs-json-provider do ${jackson.version} -->
     <dependency>
       <groupId>com.fasterxml.jackson.jaxrs</groupId>
       <artifactId>jackson-jaxrs-json-provider</artifactId>
-      <version>${jackson-jaxrs.version}</version>
+      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.glassfish.jersey.core</groupId>
@@ -135,15 +200,30 @@
           <groupId>org.glassfish.jersey.containers</groupId>
           <artifactId>jersey-container-jetty-http</artifactId>
         </exclusion>
+        <!-- Wykluczamy transitively starsze zależności Jacksona z Jersey -->
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-core-asl</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-mapper-asl</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
-    <!-- Dodajemy jawnie jetty-client w wersji 9.4.57.v20241219 -->
+    <!-- Dodajemy zależność JAX-RS API -->
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>2.1.1</version>
+    </dependency>
+    <!-- Dodajemy jawnie jetty-client w wersji 10.0.22 -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-client</artifactId>
-      <version>9.4.57.v20241219</version>
+      <version>10.0.22</version>
     </dependency>
-    <!-- Jawne deklaracje Jetty – wersje pobierane z dependencyManagement -->
+    <!-- Jawne deklaracje Jetty – wersje pobierane z dependencyManagement (będą teraz wersji 10.0.22) -->
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-http</artifactId>
@@ -159,17 +239,17 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-slf4j-impl</artifactId>
-      <version>2.17.1</version>
+      <version>2.16.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-core</artifactId>
-      <version>2.17.1</version>
+      <version>2.16.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-api</artifactId>
-      <version>2.17.1</version>
+      <version>2.16.0</version>
     </dependency>
     <dependency>
       <groupId>com.flipkart.zjsonpatch</groupId>
@@ -252,6 +332,23 @@
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
       <version>1.3</version>
+    </dependency>
+    <!-- Dodane zależności HK2 -->
+    <dependency>
+       <groupId>org.glassfish.hk2</groupId>
+       <artifactId>hk2-api</artifactId>
+       <version>3.0.3</version>
+    </dependency>
+    <dependency>
+       <groupId>org.glassfish.hk2</groupId>
+       <artifactId>hk2-locator</artifactId>
+       <version>3.0.3</version>
+    </dependency>
+    <!-- Dodana zależność Jersey HK2 -->
+    <dependency>
+       <groupId>org.glassfish.jersey.inject</groupId>
+       <artifactId>jersey-hk2</artifactId>
+       <version>${jersey.version}</version>
     </dependency>
   </dependencies>
 

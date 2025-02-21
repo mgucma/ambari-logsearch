@@ -47,9 +47,9 @@ public abstract class ManagerBase<LOG_DATA_TYPE extends LogData, SEARCH_RESPONSE
     super();
   }
   
-  protected SEARCH_RESPONSE getLastPage(SolrDaoBase solrDoaBase, SimpleQuery lastPageQuery, String event) {
+  protected SEARCH_RESPONSE getLastPage(SolrDaoBase solrDaoBase, SimpleQuery lastPageQuery, String event) {
     int maxRows = lastPageQuery.getRows();
-    SEARCH_RESPONSE logResponse = getLogAsPaginationProvided(lastPageQuery, solrDoaBase, event);
+    SEARCH_RESPONSE logResponse = getLogAsPaginationProvided(lastPageQuery, solrDaoBase, event);
     Long totalLogs = logResponse.getTotalCount();
     int startIndex = (int)(totalLogs - totalLogs % maxRows);
     int numberOfLogsOnLastPage = (int)(totalLogs - startIndex);
@@ -71,10 +71,12 @@ public abstract class ManagerBase<LOG_DATA_TYPE extends LogData, SEARCH_RESPONSE
   }
 
   protected SEARCH_RESPONSE getLogAsPaginationProvided(SolrDataQuery solrQuery, SolrDaoBase solrDaoBase, String event) {
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(solrQuery);
+    DefaultQueryParser queryParser = new DefaultQueryParser(
+      solrDaoBase.getSolrTemplate().getConverter().getMappingContext());
+    // Przekazujemy drugi argument zgodnie z nową sygnaturą:
+    SolrQuery query = queryParser.doConstructSolrQuery(solrQuery, Object.class);
     return getLogAsPaginationProvided(query, solrDaoBase, event);
   }
-
 
   protected SEARCH_RESPONSE getLogAsPaginationProvided(SolrQuery solrQuery, SolrDaoBase solrDaoBase, String event) {
     QueryResponse response = solrDaoBase.process(solrQuery, event);
@@ -106,6 +108,7 @@ public abstract class ManagerBase<LOG_DATA_TYPE extends LogData, SEARCH_RESPONSE
     SolrUtil.setFacetField(solrQuery, clusterField);
     SolrUtil.setFacetSort(solrQuery, LogSearchConstants.FACET_INDEX);
 
+    // Używamy poprawnej nazwy zmiennej: solrDaoBase
     QueryResponse response = solrDaoBase.process(solrQuery, event);
     if (response == null) {
       return clusterResponse;

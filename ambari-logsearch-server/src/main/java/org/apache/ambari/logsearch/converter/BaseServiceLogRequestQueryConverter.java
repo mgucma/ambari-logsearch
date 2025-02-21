@@ -1,8 +1,7 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -53,7 +52,7 @@ public class BaseServiceLogRequestQueryConverter extends AbstractServiceLogReque
     if (CollectionUtils.isNotEmpty(levels)){
       addInFilterQuery(query, LEVEL, levels);
     }
-    addInFiltersIfNotNullAndEnabled(query, request.getHostList(), HOST, org.apache.commons.lang.StringUtils.isEmpty(request.getHostName()));
+    addInFiltersIfNotNullAndEnabled(query, request.getHostList(), HOST, StringUtils.isEmpty(request.getHostName()));
     addRangeFilter(query, LOGTIME, request.getFrom(), request.getTo());
     return query;
   }
@@ -70,7 +69,8 @@ public class BaseServiceLogRequestQueryConverter extends AbstractServiceLogReque
       defaultSortOrder = new Sort.Order(Sort.Direction.DESC, LOGTIME);
     }
     Sort.Order sequenceIdOrder = new Sort.Order(Sort.Direction.DESC, SEQUENCE_ID);
-    return new Sort(defaultSortOrder, sequenceIdOrder);
+    // Używamy metody Sort.by(), która przyjmuje obiekty typu Sort.Order
+    return Sort.by(defaultSortOrder, sequenceIdOrder);
   }
 
   @Override

@@ -1,8 +1,7 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -57,10 +56,11 @@ public abstract class AbstractSearchRequestQueryConverter<REQUEST_TYPE extends C
       for (Sort.Order order : sort) {
         newOrders.add(new Sort.Order(order.getDirection() == Direction.ASC ? Direction.DESC : Direction.ASC, order.getProperty()));
       }
-      sort = new Sort(newOrders);
+      sort = Sort.by(newOrders);
     }
     
-    PageRequest pageRequest = new PageRequest(page, pageSize, sort);
+    // Używamy metody PageRequest.of() zamiast konstruktora
+    PageRequest pageRequest = PageRequest.of(page, pageSize, sort);
     query.setPageRequest(pageRequest);
   }
 

@@ -64,7 +64,7 @@ public class ServiceLogTruncatedRequestQueryConverter extends AbstractServiceLog
     }
     Sort.Order logtimeSortOrder = new Sort.Order(direction, LOGTIME);
     Sort.Order secuqnceIdSortOrder = new Sort.Order(direction, SEQUENCE_ID);
-    return new Sort(logtimeSortOrder, secuqnceIdSortOrder);
+    return Sort.by(logtimeSortOrder, secuqnceIdSortOrder);
   }
 
   @Override

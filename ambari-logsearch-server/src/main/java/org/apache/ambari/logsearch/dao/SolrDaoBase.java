@@ -46,6 +46,7 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.response.SolrResponseBase;
 import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrException;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.solr.core.DefaultQueryParser;
 import org.springframework.data.solr.core.SolrTemplate;
 import org.springframework.data.solr.core.query.SolrDataQuery;
@@ -121,7 +122,8 @@ public abstract class SolrDaoBase {
   }
 
   public UpdateResponse deleteByQuery(SolrDataQuery solrDataQuery, String event) {
-    return deleteByQuery(new DefaultQueryParser().doConstructSolrQuery(solrDataQuery), event);
+    DefaultQueryParser queryParser = new DefaultQueryParser(getSolrTemplate().getConverter().getMappingContext());
+    return deleteByQuery(queryParser.doConstructSolrQuery(solrDataQuery, Object.class), event);
   }
 
   public QueryResponse process(SolrQuery solrQuery) {
@@ -129,16 +131,18 @@ public abstract class SolrDaoBase {
   }
 
   public QueryResponse process(SolrDataQuery solrDataQuery) {
-    return process(new DefaultQueryParser().doConstructSolrQuery(solrDataQuery));
+    DefaultQueryParser queryParser = new DefaultQueryParser(getSolrTemplate().getConverter().getMappingContext());
+    return process(queryParser.doConstructSolrQuery(solrDataQuery, Object.class));
   }
 
   public long count(final SolrDataQuery solrDataQuery) {
     return getSolrTemplate().execute(solrClient -> {
-      SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(solrDataQuery);
+      DefaultQueryParser queryParser = new DefaultQueryParser(getSolrTemplate().getConverter().getMappingContext());
+      SolrQuery solrQuery = queryParser.doConstructSolrQuery(solrDataQuery, Object.class);
       solrQuery.setStart(0);
       solrQuery.setRows(0);
       QueryResponse queryResponse = solrClient.query(solrQuery);
-      long count = solrClient.query(solrQuery).getResults().getNumFound();
+      long count = queryResponse.getResults().getNumFound();
       performanceLogger.info("\n Username :- " + LogSearchContext.getCurrentUsername() + " Count SolrQuery :- " +
         solrQuery + "\nQuery Time Execution :- " + queryResponse.getQTime() + " Total Time Elapsed is :- " +
         queryResponse.getElapsedTime() + " Count result :- " + count);
@@ -147,7 +151,8 @@ public abstract class SolrDaoBase {
   }
 
   public QueryResponse process(SolrDataQuery solrDataQuery, String event) {
-    return process(new DefaultQueryParser().doConstructSolrQuery(solrDataQuery), event);
+    DefaultQueryParser queryParser = new DefaultQueryParser(getSolrTemplate().getConverter().getMappingContext());
+    return process(queryParser.doConstructSolrQuery(solrDataQuery, Object.class), event);
   }
 
   private void logSolrEvent(String event, SolrQuery solrQuery, SolrResponseBase solrResponseBase) {
@@ -177,5 +182,4 @@ public abstract class SolrDaoBase {
   public SolrKerberosConfig getSolrKerberosConfig() {
     return this.solrKerberosConfig;
   }
-
 }

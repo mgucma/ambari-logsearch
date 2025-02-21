@@ -24,7 +24,11 @@ import org.apache.ambari.logsearch.util.SolrUtil;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.mapping.SolrPersistentEntity;
+import org.springframework.data.solr.core.mapping.SolrPersistentProperty;
 import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
@@ -32,10 +36,13 @@ import static org.junit.Assert.assertEquals;
 public class BaseServiceLogRequestQueryConverterTest extends AbstractRequestConverterTest {
 
   private BaseServiceLogRequestQueryConverter underTest;
+  private DefaultQueryParser queryParser;
 
   @Before
   public void setUp() {
     underTest = new BaseServiceLogRequestQueryConverter();
+    MappingContext<? extends SolrPersistentEntity<?>, SolrPersistentProperty> mappingContext = new SimpleSolrMappingContext();
+    queryParser = new DefaultQueryParser(mappingContext);
   }
 
   @Test
@@ -49,8 +56,7 @@ public class BaseServiceLogRequestQueryConverterTest extends AbstractRequestConv
     logRequest.setHostList("logsearch1.com,logsearch2.com");
     // WHEN
     SimpleQuery query = underTest.convert(logRequest);
-    DefaultQueryParser defaultQueryParser = new DefaultQueryParser();
-    SolrQuery solrQuery = defaultQueryParser.doConstructSolrQuery(query);
+    SolrQuery solrQuery = queryParser.doConstructSolrQuery(query, Object.class); // Dodano Object.class jako drugi argument
     SolrUtil.removeDoubleOrTripleEscapeFromFilters(solrQuery);
     // THEN
     assertEquals("?q=*%3A*&start=0&rows=25&fq=type%3A%28logsearch_app+%22OR%22+secure_log%29&fq=-type%3A%28hst_agent+%22OR%22+system_message%29" +
@@ -69,5 +75,4 @@ public class BaseServiceLogRequestQueryConverterTest extends AbstractRequestConv
     // THEN
     assertEquals(Integer.valueOf(99999), query.getRows());
   }
-
 }

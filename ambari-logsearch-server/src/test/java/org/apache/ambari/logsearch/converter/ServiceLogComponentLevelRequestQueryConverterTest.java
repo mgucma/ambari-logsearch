@@ -23,17 +23,24 @@ import org.apache.ambari.logsearch.model.request.impl.query.ServiceLogComponentL
 import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.mapping.SolrPersistentEntity;
+import org.springframework.data.solr.core.mapping.SolrPersistentProperty;
 
 import static org.junit.Assert.assertEquals;
 
 public class ServiceLogComponentLevelRequestQueryConverterTest extends AbstractRequestConverterTest {
 
   private ServiceLogComponentLevelRequestQueryConverter underTest;
+  private DefaultQueryParser queryParser;
 
   @Before
   public void setUp() {
     underTest = new ServiceLogComponentLevelRequestQueryConverter();
+    MappingContext<? extends SolrPersistentEntity<?>, SolrPersistentProperty> mappingContext = new SimpleSolrMappingContext();
+    queryParser = new DefaultQueryParser(mappingContext);
   }
 
   @Test
@@ -44,7 +51,7 @@ public class ServiceLogComponentLevelRequestQueryConverterTest extends AbstractR
     request.setComponentName("mycomponent");
     request.setLevel("WARN,ERROR,FATAL");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = queryParser.doConstructSolrQuery(underTest.convert(request), Object.class); // Dodano Object.class jako drugi argument
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=logtime%3A%5B2016-09-13T22%3A00%3A01.000Z+TO+2016-09-14T22%3A00%3A01.000Z%5D" +
         "&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage&fq=type%3A%28logsearch_app+%22OR%22+secure_log%29" +
@@ -59,7 +66,7 @@ public class ServiceLogComponentLevelRequestQueryConverterTest extends AbstractR
     ServiceLogComponentLevelRequest request = new ServiceLogComponentLevelQueryRequest();
     request.setLevel("WARN,ERROR,FATAL");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = queryParser.doConstructSolrQuery(underTest.convert(request), Object.class); // Dodano Object.class jako drugi argument
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=logtime%3A%5B*+TO+*%5D&fq=level%3A%28WARN+%22OR%22+ERROR+%22OR%22+FATAL%29&facet=true" +
       "&facet.mincount=1&facet.limit=-1&facet.sort=index&facet.pivot=type%2Clevel", query.toQueryString());

@@ -22,7 +22,6 @@ import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.data.rest.RepositoryRestMvcAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.solr.SolrRepositoriesAutoConfiguration;
 import org.springframework.boot.autoconfigure.solr.SolrAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFactoryCustomizerAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.servlet.TomcatServletWebServerFactoryCustomizer;
@@ -36,8 +35,7 @@ import org.springframework.boot.context.ApplicationPidFileWriter;
   exclude = {
     RepositoryRestMvcAutoConfiguration.class,
     WebMvcAutoConfiguration.class,
-    SolrAutoConfiguration.class,
-    SolrRepositoriesAutoConfiguration.class
+    SolrAutoConfiguration.class
   }
 )
 public class LogSearch {

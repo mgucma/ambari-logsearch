@@ -101,7 +101,10 @@ import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.springframework.core.convert.ConversionService;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SolrPersistentEntity;
+import org.springframework.data.solr.core.mapping.SolrPersistentProperty;
 import org.springframework.data.solr.core.query.Criteria;
 import org.springframework.data.solr.core.query.SimpleFacetQuery;
 import org.springframework.data.solr.core.query.SimpleFilterQuery;
@@ -136,6 +139,9 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
   @Inject
   private LabelFallbackHandler labelFallbackHandler;
 
+  @Inject
+  private MappingContext<? extends SolrPersistentEntity<?>, SolrPersistentProperty> mappingContext;
+
   public ServiceLogResponse searchLogs(ServiceLogRequest request) {
     String event = "/service/logs";
     String keyword = request.getKeyWord();
@@ -169,7 +175,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
 
   public GraphDataListResponse getAggregatedInfo(ServiceLogAggregatedInfoRequest request) {
     SimpleQuery solrDataQuery = new BaseServiceLogRequestQueryConverter().convert(request);
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(solrDataQuery);
+    SolrQuery solrQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(solrDataQuery, SolrServiceLogData.class);
     String hierarchy = String.format("%s,%s,%s", HOST, COMPONENT, LEVEL);
     solrQuery.setQuery("*:*");
     SolrUtil.setFacetPivot(solrQuery, 1, hierarchy);
@@ -196,7 +202,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
 
   public NodeListResponse getTreeExtension(ServiceLogHostComponentRequest request) {
     SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(facetQuery);
+    SolrQuery solrQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(facetQuery, SolrServiceLogData.class);
     String hostName = request.getHostName() == null ? "" : request.getHostName();
     if (StringUtils.isNotBlank(hostName)){
       solrQuery.addFilterQuery(String.format("%s:*%s*", HOST, hostName));
@@ -210,7 +216,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
 
   public NodeListResponse getHostListByComponent(ServiceLogComponentHostRequest request) {
     SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(facetQuery);
+    SolrQuery solrQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(facetQuery, SolrServiceLogData.class);
     solrQuery.setFacetSort(request.getSortBy() == null ? HOST: request.getSortBy());
 
     NodeListResponse list = new NodeListResponse();
@@ -277,7 +283,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
     request.setFrom(fromDate);
     request.setTo(toDate);
     request.setPage(String.valueOf(start));
-    SolrQuery keywordNextPageQuery = new DefaultQueryParser().doConstructSolrQuery(conversionService.convert(request, SimpleQuery.class));
+    SolrQuery keywordNextPageQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(conversionService.convert(request, SimpleQuery.class), SolrServiceLogData.class);
     return getLogAsPaginationProvided(keywordNextPageQuery, serviceLogsSolrDao, event);
   }
 
@@ -315,7 +321,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
     SimpleQuery keywordNextQuery = conversionService.convert(request, SimpleQuery.class);
     keywordNextQuery.addFilterQuery(new SimpleFilterQuery(new Criteria(KEY_LOG_MESSAGE).contains(keyword)));
     keywordNextQuery.setRows(1);
-    SolrQuery kewordNextSolrQuery = new DefaultQueryParser().doConstructSolrQuery(keywordNextQuery);
+    SolrQuery kewordNextSolrQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(keywordNextQuery, SolrServiceLogData.class);
     kewordNextSolrQuery.setStart(0);
     if (hasNextOrAscOrder(isNext, timeAscending)) {
       kewordNextSolrQuery.setSort(LOGTIME, SolrQuery.ORDER.desc);
@@ -345,7 +351,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
       lastOrFirstLogIndex = (currentPageNumber * maxRows) - 1;
     }
     SimpleQuery sq = conversionService.convert(request, SimpleQuery.class);
-    SolrQuery nextPageLogTimeQuery = new DefaultQueryParser().doConstructSolrQuery(sq);
+    SolrQuery nextPageLogTimeQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(sq, SolrServiceLogData.class);
     nextPageLogTimeQuery.remove("start");
     nextPageLogTimeQuery.remove("rows");
     nextPageLogTimeQuery.setStart(lastOrFirstLogIndex);
@@ -415,7 +421,7 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
 
   public NodeListResponse getComponentListWithLevelCounts(ServiceLogComponentLevelRequest request) {
     SimpleFacetQuery facetQuery = conversionService.convert(request, SimpleFacetQuery.class);
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(facetQuery);
+    SolrQuery solrQuery = new DefaultQueryParser(mappingContext).doConstructSolrQuery(facetQuery, SolrServiceLogData.class);
     solrQuery.setFacetSort(StringUtils.isEmpty(request.getSortBy()) ? COMPONENT: request.getSortBy());
     QueryResponse response = serviceLogsSolrDao.process(facetQuery, "/service/logs/components/levels/counts");
     return responseDataGenerator.generateOneLevelServiceNodeTree(response, String.format("%s,%s", COMPONENT, LEVEL));
@@ -596,7 +602,6 @@ public class ServiceLogsManager extends ManagerBase<ServiceLogData, ServiceLogRe
   public List<String> getClusters() {
     return getClusters(serviceLogsSolrDao, CLUSTER, "/service/logs/clusters");
   }
-
 
   public ServiceComponentMetadataWrapper getComponentMetadata(String clusters) {
     String pivotFields = COMPONENT + ",group";

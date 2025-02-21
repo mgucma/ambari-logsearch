@@ -24,6 +24,8 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.query.SimpleFacetQuery;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,7 +44,8 @@ public class ServiceLogLevelCountRequestQueryConverterTest extends AbstractReque
     ServiceLogLevelCountRequest request = new ServiceLogLevelCountQueryRequest();
     fillBaseLogRequestWithTestData(request);
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleFacetQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=logtime%3A%5B2016-09-13T22%3A00%3A01.000Z+TO+2016-09-14T22%3A00%3A01.000Z%5D" +
         "&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage&fq=type%3A%28logsearch_app+%22OR%22+secure_log%29" +
@@ -55,7 +58,8 @@ public class ServiceLogLevelCountRequestQueryConverterTest extends AbstractReque
     // GIVEN
     ServiceLogLevelCountRequest request = new ServiceLogLevelCountQueryRequest();
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleFacetQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=logtime%3A%5B*+TO+*%5D&facet=true&facet.mincount=1&facet.limit=-1&facet.field=level",
       query.toQueryString());

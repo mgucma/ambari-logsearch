@@ -26,53 +26,53 @@ import java.util.Date;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public interface ServiceLogData extends CommonLogData, ComponentTypeLogData, HostLogData {
 
-  @JsonProperty("level")
-  String getLevel();
+    @JsonProperty("level")
+    String getLevel();
 
-  void setLevel(String level);
+    void setLevel(String level);
 
-  @JsonProperty("line_number")
-  Integer getLineNumber();
+    @JsonProperty("line_number")
+    Integer getLineNumber();
 
-  void setLineNumber(Integer lineNumber);
+    void setLineNumber(Integer lineNumber);
 
-  @JsonProperty("logtime")
-  Date getLogTime();
+    @JsonProperty("logtime")
+    Date getLogTime();
 
-  void setLogTime(Date logTime);
+    void setLogTime(Date logTime);
 
-  @JsonProperty("ip")
-  String getIp();
+    @JsonProperty("ip")
+    String getIp();
 
-  void setIp(String ip);
+    void setIp(String ip);
 
-  @JsonProperty("path")
-  String getPath();
+    @JsonProperty("path")
+    String getPath();
 
-  void setPath(String path);
+    void setPath(String path);
 
-  @JsonProperty("type")
-  String getType();
+    @JsonProperty("type")
+    String getType();
 
-  void setType(String type);
+    void setType(String type);
 
-  @JsonProperty("host")
-  String getHost();
+    @JsonProperty("host")
+    String getHost();
 
-  void setHost(String host);
+    void setHost(String host);
 
-  @JsonProperty("group")
-  String getGroup();
+    @JsonProperty("group")
+    String getGroup();
 
-  void setGroup(String group);
+    void setGroup(String group);
 
-  @JsonProperty("logger_name")
-  String getLoggerName();
+    @JsonProperty("logger_name")
+    String getLoggerName();
 
-  void setLoggerName(String loggerName);
+    void setLoggerName(String loggerName);
 
-  @JsonProperty("method")
-  String getMethod();
+    @JsonProperty("method")
+    String getMethod();
 
-  void setMethod(String method);
+    void setMethod(String method);
 }

@@ -24,6 +24,8 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,11 +44,13 @@ public class AuditServiceLoadRequestQueryConverterTest extends AbstractRequestCo
     AuditServiceLoadRequest request = new AuditServiceLoadQueryRequest();
     fillBaseLogRequestWithTestData(request);
     // WHEN
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery solrQuery = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=evtTime%3A%5B2016-09-13T22%3A00%3A01.000Z+TO+2016-09-14T22%3A00%3A01.000Z%5D" +
       "&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage&fq=repo%3A%28logsearch_app+%22OR%22+secure_log%29" +
-      "&fq=-repo%3A%28hst_agent+%22OR%22+system_message%29&fq=cluster%3Acl1&facet=true&facet.mincount=1&facet.limit=10&facet.field=repo", solrQuery.toQueryString());
+      "&fq=-repo%3A%28hst_agent+%22OR%22+system_message%29&fq=cluster%3Acl1&facet=true&facet.mincount=1&facet.limit=10&facet.field=repo",
+      solrQuery.toQueryString());
   }
 
   @Test
@@ -54,7 +58,8 @@ public class AuditServiceLoadRequestQueryConverterTest extends AbstractRequestCo
     // GIVEN
     AuditServiceLoadRequest request = new AuditServiceLoadQueryRequest();
     // WHEN
-    SolrQuery solrQuery = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery solrQuery = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&rows=0&fq=evtTime%3A%5B*+TO+*%5D&facet=true&facet.mincount=1&facet.limit=10&facet.field=repo",
       solrQuery.toQueryString());

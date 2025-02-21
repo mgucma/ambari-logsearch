@@ -18,5 +18,51 @@
  */
 package org.apache.ambari.logsearch.model.response;
 
+import java.util.List;
+
 abstract public class LogSearchResponse<T extends LogData> extends SearchResponse implements LogListResponse<T> {
+    private List<T> logList;
+    private long total;
+    private int offset;
+    private Integer size;
+
+    @Override
+    public List<T> getLogList() {
+        return logList;
+    }
+
+    @Override
+    public void setLogList(List<T> logList) {
+        this.logList = logList;
+    }
+
+    @Override
+    public long getTotal() {
+        return total;
+    }
+
+    @Override
+    public void setTotal(long total) {
+        this.total = total;
+    }
+
+    @Override
+    public int getOffset() {
+        return offset;
+    }
+
+    @Override
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+
+    @Override
+    public Integer getSize() {
+        return size;
+    }
+
+    @Override
+    public void setSize(Integer size) {
+        this.size = size;
+    }
 }

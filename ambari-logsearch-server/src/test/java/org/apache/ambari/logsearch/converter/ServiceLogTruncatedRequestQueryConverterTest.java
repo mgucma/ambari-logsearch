@@ -24,6 +24,8 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
 
@@ -45,7 +47,8 @@ public class ServiceLogTruncatedRequestQueryConverterTest extends AbstractReques
     request.setNumberRows(10);
     request.setId("id");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&start=0&rows=10&fq=type%3A%28logsearch_app+%22OR%22+secure_log%29" +
         "&fq=-type%3A%28hst_agent+%22OR%22+system_message%29&fq=log_message%3Amyincludemessage&fq=-log_message%3Amyexcludemessage" +
@@ -58,7 +61,8 @@ public class ServiceLogTruncatedRequestQueryConverterTest extends AbstractReques
     // GIVEN
     ServiceLogTruncatedRequest request = new ServiceLogTruncatedQueryRequest();
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=*%3A*&start=0&sort=logtime+desc%2Cseq_num+desc",
       query.toQueryString());

@@ -24,6 +24,8 @@ import org.apache.solr.client.solrj.SolrQuery;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.solr.core.DefaultQueryParser;
+import org.springframework.data.solr.core.mapping.SimpleSolrMappingContext;
+import org.springframework.data.solr.core.query.SimpleQuery;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,7 +44,8 @@ public class HostLogFilesRequestQueryConverterTest extends AbstractRequestConver
     HostLogFilesRequest request = new HostLogFilesQueryRequest();
     request.setHostName("hostName");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=host%3A%28hostName%29&rows=0&facet=true&facet.mincount=1&facet.limit=-1&facet.pivot=type%2Cpath",
       query.toQueryString());
@@ -55,7 +58,8 @@ public class HostLogFilesRequestQueryConverterTest extends AbstractRequestConver
     request.setHostName("hostName");
     request.setComponentName("componentName");
     // WHEN
-    SolrQuery query = new DefaultQueryParser().doConstructSolrQuery(underTest.convert(request));
+    SolrQuery query = new DefaultQueryParser(new SimpleSolrMappingContext())
+        .doConstructSolrQuery(underTest.convert(request), SimpleQuery.class);
     // THEN
     assertEquals("?q=host%3A%28hostName%29+AND+type%3A%28componentName%29&rows=0&facet=true&facet.mincount=1&facet.limit=-1" +
         "&facet.pivot=type%2Cpath", query.toQueryString());

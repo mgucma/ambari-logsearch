@@ -21,7 +21,15 @@ package org.apache.ambari.logsearch.model.response;
 import java.util.List;
 
 public interface LogListResponse<T extends LogData> {
-  List<T> getLogList();
+    List<T> getLogList();
+    void setLogList(List<T> logList);
 
-  void setLogList(List<T> logList);
+    long getTotal();
+    void setTotal(long total);
+
+    int getOffset();
+    void setOffset(int offset);
+
+    Integer getSize();
+    void setSize(Integer size);
 }

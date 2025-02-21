@@ -1,29 +1,24 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- * 
- * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ * distributed with this work for additional information regarding copyright ownership.
+ * The ASF licenses this file under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.  You may obtain a copy
+ * of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * software distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package org.apache.ambari.logsearch.conf;
 
 import io.swagger.jaxrs.config.BeanConfig;
 import io.swagger.jaxrs.listing.SwaggerSerializers;
-
 import io.swagger.models.Info;
 import io.swagger.models.License;
-import org.apache.ambari.logsearch.rest.ServiceLogsResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -45,7 +40,7 @@ public class ApiDocConfig {
   @Bean
   public BeanConfig swaggerConfig() {
     BeanConfig beanConfig = new BeanConfig();
-    beanConfig.setSchemes(new String[]{"http", "https"});
+    beanConfig.setSchemes(new String[] {"http", "https"});
     beanConfig.setBasePath(BASE_PATH);
     beanConfig.setTitle(TITLE);
     beanConfig.setDescription(DESCRIPTION);
@@ -53,7 +48,8 @@ public class ApiDocConfig {
     beanConfig.setLicenseUrl(LICENSE_URL);
     beanConfig.setScan(true);
     beanConfig.setVersion(VERSION);
-    beanConfig.setResourcePackage(ServiceLogsResource.class.getPackage().getName());
+    // Ustawiamy jawnie nazwę pakietu, zamiast odwoływać się do klasy ServiceLogsResource
+    beanConfig.setResourcePackage("org.apache.ambari.logsearch.rest");
 
     License license = new License();
     license.setName(LICENSE);
