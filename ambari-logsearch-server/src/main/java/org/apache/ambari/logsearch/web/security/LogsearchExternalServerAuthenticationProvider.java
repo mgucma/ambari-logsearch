@@ -21,8 +21,8 @@ package org.apache.ambari.logsearch.web.security;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import org.apache.ambari.logsearch.common.ExternalServerClient;
 import org.apache.ambari.logsearch.conf.AuthPropsConfig;

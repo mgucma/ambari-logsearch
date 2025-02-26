@@ -24,7 +24,7 @@ import org.apache.ambari.logsearch.config.api.LogSearchPropertyDescription;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 @Configuration
 public class S3OutputConfig {

@@ -21,9 +21,9 @@ package org.apache.ambari.logsearch.model.request.impl.query;
 import org.apache.ambari.logsearch.common.LogSearchConstants;
 import org.apache.ambari.logsearch.model.request.impl.MetadataRequest;
 
-import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
-import javax.ws.rs.QueryParam;
+import jakarta.annotation.Nullable;
+import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.QueryParam;
 
 public class MetadataQueryRequest implements MetadataRequest {
 

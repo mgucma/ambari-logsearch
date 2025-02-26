@@ -19,7 +19,7 @@
 
 package org.apache.ambari.logsearch.model.common;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import org.apache.ambari.logsearch.config.api.model.inputconfig.InputDescriptor;
 import org.apache.ambari.logsearch.config.api.model.inputconfig.InputS3FileDescriptor;

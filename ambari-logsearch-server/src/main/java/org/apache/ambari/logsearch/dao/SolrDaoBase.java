@@ -24,7 +24,7 @@ import static org.apache.solr.common.SolrException.ErrorCode.UNKNOWN;
 
 import java.io.IOException;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import org.apache.ambari.logsearch.common.LogSearchContext;
 import org.apache.ambari.logsearch.common.LogType;

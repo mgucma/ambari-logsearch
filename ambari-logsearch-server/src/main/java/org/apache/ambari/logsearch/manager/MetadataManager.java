@@ -38,8 +38,8 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.springframework.core.convert.ConversionService;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import static org.apache.ambari.logsearch.solr.SolrConstants.MetadataConstants.ID;
 import static org.apache.ambari.logsearch.solr.SolrConstants.MetadataConstants.USER_NAME;

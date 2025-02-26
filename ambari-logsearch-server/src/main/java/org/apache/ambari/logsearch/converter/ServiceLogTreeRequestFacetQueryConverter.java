@@ -21,7 +21,7 @@ package org.apache.ambari.logsearch.converter;
 import org.apache.ambari.logsearch.common.LogType;
 import org.apache.ambari.logsearch.model.request.impl.ServiceLogHostComponentRequest;
 import org.springframework.data.solr.core.query.FacetOptions;
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.COMPONENT;
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.HOST;

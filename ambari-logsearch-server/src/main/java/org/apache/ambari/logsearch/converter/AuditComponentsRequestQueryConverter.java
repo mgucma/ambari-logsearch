@@ -26,7 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.data.solr.core.query.FacetOptions;
 import org.springframework.data.solr.core.query.SimpleFacetQuery;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 import static org.apache.ambari.logsearch.solr.SolrConstants.AuditLogConstants.AUDIT_COMPONENT;
 import static org.apache.ambari.logsearch.solr.SolrConstants.AuditLogConstants.AUDIT_EVTTIME;

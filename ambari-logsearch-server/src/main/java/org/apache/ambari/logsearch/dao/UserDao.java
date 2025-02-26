@@ -22,8 +22,8 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 
 import org.apache.ambari.logsearch.conf.AuthPropsConfig;
 import org.apache.ambari.logsearch.util.FileUtil;
@@ -56,7 +56,7 @@ public class UserDao {
   private ArrayList<HashMap<String, String>> userList = null;
 
   @SuppressWarnings("unchecked")
-  @PostConstruct
+  @PostConstruct // Adnotacja z jakarta.annotation.PostConstruct
   public void initialization() {
     if (authPropsConfig.isAuthFileEnabled()) {
       try {

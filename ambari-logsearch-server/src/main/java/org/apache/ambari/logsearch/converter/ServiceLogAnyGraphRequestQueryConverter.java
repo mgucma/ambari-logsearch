@@ -28,7 +28,7 @@ import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.LOGTIME;
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.LEVEL;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 @Named
 public class ServiceLogAnyGraphRequestQueryConverter extends AbstractLogRequestFacetQueryConverter<ServiceAnyGraphRequest>{

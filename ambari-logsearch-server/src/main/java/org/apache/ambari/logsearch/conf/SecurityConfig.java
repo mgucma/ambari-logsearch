@@ -1,24 +1,21 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * distributed with this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.ambari.logsearch.conf;
 
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
+import static jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 import static org.apache.ambari.logsearch.common.LogSearchConstants.LOGSEARCH_SESSION_ID;
 
 import java.io.File;
@@ -26,10 +23,10 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.ambari.logsearch.common.LogSearchLdapAuthorityMapper;
 import org.apache.ambari.logsearch.common.StatusMessage;
@@ -58,11 +55,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.ldap.core.LdapTemplate;
-import org.springframework.ldap.core.support.LdapContextSource;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.context.annotation.Scope;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.ldap.authentication.BindAuthenticator;
 import org.springframework.security.ldap.authentication.NullLdapAuthoritiesPopulator;
 import org.springframework.security.ldap.search.FilterBasedLdapUserSearch;
@@ -70,6 +68,7 @@ import org.springframework.security.ldap.userdetails.DefaultLdapAuthoritiesPopul
 import org.springframework.security.ldap.userdetails.LdapAuthoritiesPopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.header.HeaderWriter;
@@ -84,9 +83,13 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.google.common.collect.Lists;
 
+// NEW IMPORTS for Spring LDAP:
+import org.springframework.ldap.core.support.LdapContextSource;
+import org.springframework.ldap.core.LdapTemplate;
+
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig extends WebSecurityConfigurerAdapter {
+public class SecurityConfig {
 
   private static final Logger logger = LogManager.getLogger(SecurityConfig.class);
 
@@ -139,48 +142,62 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Inject
   private RoleDao roleDao;
 
-  @Override
-  protected void configure(HttpSecurity http) throws Exception {
+  /**
+   * Replaces the old configure(HttpSecurity) method.
+   */
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationConfiguration authConfig) throws Exception {
     http
-      .headers()
+      .headers(headers -> headers
         .addHeaderWriter(
           new LogSearchCompositeHeaderWriter("https".equals(logSearchHttpConfig.getProtocol()),
             new XXssProtectionHeaderWriter(),
             new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.DENY),
             new XContentTypeOptionsHeaderWriter(),
             new StaticHeadersWriter("Pragma", "no-cache"),
-            new StaticHeadersWriter("Cache-Control", "no-store")))
-      .and()
-      .csrf().disable()
-      .authorizeRequests()
-        .requestMatchers(requestMatcher())
-          .permitAll()
-        .antMatchers("/**")
-          .hasRole("USER")
-      .and()
+            new StaticHeadersWriter("Cache-Control", "no-store")
+          )
+        )
+      )
+      .csrf(csrf -> csrf.disable())
+      .authorizeHttpRequests(auth -> auth
+        .requestMatchers(requestMatcher()).permitAll()
+        .requestMatchers("/**").hasRole("USER")
+      )
       .authenticationProvider(logsearchAuthenticationProvider)
-      .httpBasic()
+      .httpBasic(basic -> basic
         .authenticationEntryPoint(logsearchAuthenticationEntryPoint())
-      .and()
-      .addFilterBefore(logsearchTrustedProxyFilter(), BasicAuthenticationFilter.class)
+      )
+      // Register filters; order is preserved as added:
+      .addFilterBefore(logsearchTrustedProxyFilter(authConfig), BasicAuthenticationFilter.class)
       .addFilterAfter(logsearchKRBAuthenticationFilter(), LogsearchTrustedProxyFilter.class)
-      .addFilterBefore(logsearchUsernamePasswordAuthenticationFilter(), LogsearchKRBAuthenticationFilter.class)
+      .addFilterBefore(logsearchUsernamePasswordAuthenticationFilter(authConfig), LogsearchKRBAuthenticationFilter.class)
       .addFilterAfter(securityContextFormationFilter(), FilterSecurityInterceptor.class)
       .addFilterAfter(logsearchMetadataFilter(), LogsearchSecurityContextFormationFilter.class)
       .addFilterAfter(logsearchAuditLogFilter(), LogsearchSecurityContextFormationFilter.class)
       .addFilterAfter(logsearchServiceLogFilter(), LogsearchSecurityContextFormationFilter.class)
       .addFilterAfter(logSearchConfigStateFilter(), LogsearchSecurityContextFormationFilter.class)
       .addFilterBefore(logsearchCorsFilter(), LogsearchSecurityContextFormationFilter.class)
-      .addFilterBefore(logsearchJwtFilter(), LogsearchSecurityContextFormationFilter.class)
-      .logout()
+      .addFilterBefore(logsearchJwtFilter(authConfig), LogsearchSecurityContextFormationFilter.class)
+      .logout(logout -> logout
         .logoutUrl("/logout")
         .deleteCookies(getCookies())
-        .logoutSuccessHandler(new LogsearchLogoutSuccessHandler());
+        .logoutSuccessHandler(new LogsearchLogoutSuccessHandler())
+      );
 
     if ((logSearchConfigApiConfig.isSolrFilterStorage() || logSearchConfigApiConfig.isZkFilterStorage())
-            && !logSearchConfigApiConfig.isConfigApiEnabled())
+        && !logSearchConfigApiConfig.isConfigApiEnabled()) {
       http.addFilterAfter(logSearchLogLevelFilterManagerFilter(), LogsearchSecurityContextFormationFilter.class);
+    }
+    return http.build();
   }
+
+  @Bean
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+    return authConfig.getAuthenticationManager();
+  }
+
+  // Beans for LDAP and other filters remain similar
 
   @Bean
   public LdapContextSource ldapContextSource() {
@@ -208,7 +225,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     if (authPropsConfig.isAuthLdapEnabled()) {
       return new LdapTemplate(ldapContextSource());
     }
-
     return null;
   }
 
@@ -225,7 +241,6 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           authPropsConfig.getLdapAuthConfig().getLdapUserSearchFilter(),
           ldapContextSource()));
       }
-
       return bindAuthenticator;
     }
     return null;
@@ -234,13 +249,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   @Bean
   public LdapAuthoritiesPopulator ldapAuthoritiesPopulator() {
     if (authPropsConfig.isAuthLdapEnabled() || StringUtils.isNotBlank(authPropsConfig.getLdapAuthConfig().getLdapGroupSearchBase())) {
-      final DefaultLdapAuthoritiesPopulator ldapAuthoritiesPopulator =
+      final DefaultLdapAuthoritiesPopulator populator =
         new DefaultLdapAuthoritiesPopulator(ldapContextSource(), authPropsConfig.getLdapAuthConfig().getLdapGroupSearchBase());
-      ldapAuthoritiesPopulator.setGroupSearchFilter(authPropsConfig.getLdapAuthConfig().getLdapGroupSearchFilter());
-      ldapAuthoritiesPopulator.setGroupRoleAttribute(authPropsConfig.getLdapAuthConfig().getLdapGroupRoleAttribute());
-      ldapAuthoritiesPopulator.setSearchSubtree(true);
-      ldapAuthoritiesPopulator.setConvertToUpperCase(true);
-      return ldapAuthoritiesPopulator;
+      populator.setGroupSearchFilter(authPropsConfig.getLdapAuthConfig().getLdapGroupSearchFilter());
+      populator.setGroupRoleAttribute(authPropsConfig.getLdapAuthConfig().getLdapGroupRoleAttribute());
+      populator.setSearchSubtree(true);
+      populator.setConvertToUpperCase(true);
+      return populator;
     }
     return new NullLdapAuthoritiesPopulator();
   }
@@ -271,16 +286,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   }
 
   @Bean
-  public LogsearchTrustedProxyFilter logsearchTrustedProxyFilter() throws Exception {
+  public LogsearchTrustedProxyFilter logsearchTrustedProxyFilter(AuthenticationConfiguration authConfig) throws Exception {
     LogsearchTrustedProxyFilter filter = new LogsearchTrustedProxyFilter(requestMatcher(), authPropsConfig);
-    filter.setAuthenticationManager(authenticationManagerBean());
+    filter.setAuthenticationManager(authenticationManager(authConfig));
     return filter;
   }
 
   @Bean
-  public LogsearchJWTFilter logsearchJwtFilter() throws Exception {
+  public LogsearchJWTFilter logsearchJwtFilter(AuthenticationConfiguration authConfig) throws Exception {
     LogsearchJWTFilter filter = new LogsearchJWTFilter(requestMatcher(), authPropsConfig, roleDao);
-    filter.setAuthenticationManager(authenticationManagerBean());
+    filter.setAuthenticationManager(authenticationManager(authConfig));
     filter.setAuthenticationSuccessHandler(new LogsearchAuthSuccessHandler());
     filter.setAuthenticationFailureHandler(new LogsearchAuthFailureHandler());
     return filter;
@@ -295,11 +310,11 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   }
 
   @Bean
-  public LogsearchUsernamePasswordAuthenticationFilter logsearchUsernamePasswordAuthenticationFilter() throws Exception {
+  public LogsearchUsernamePasswordAuthenticationFilter logsearchUsernamePasswordAuthenticationFilter(AuthenticationConfiguration authConfig) throws Exception {
     LogsearchUsernamePasswordAuthenticationFilter filter = new LogsearchUsernamePasswordAuthenticationFilter();
     filter.setAuthenticationSuccessHandler(new LogsearchAuthSuccessHandler());
     filter.setAuthenticationFailureHandler(new LogsearchAuthFailureHandler());
-    filter.setAuthenticationManager(authenticationManagerBean());
+    filter.setAuthenticationManager(authenticationManager(authConfig));
     return filter;
   }
 
@@ -321,19 +336,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
   }
 
   private LogsearchFilter logSearchConfigStateFilter() {
-    RequestMatcher requestMatcher;
-    if (logSearchConfigApiConfig.isSolrFilterStorage() || logSearchConfigApiConfig.isZkFilterStorage()) {
-      requestMatcher = shipperConfigInputRequestMatcher();
-    } else {
-      requestMatcher = logsearchConfigRequestMatcher();
-    }
-
-    return new LogsearchFilter(requestMatcher, new ConfigStateProvider(logSearchConfigState, logSearchConfigApiConfig.isConfigApiEnabled()));
+    RequestMatcher matcher = (logSearchConfigApiConfig.isSolrFilterStorage() || logSearchConfigApiConfig.isZkFilterStorage())
+        ? shipperConfigInputRequestMatcher() : logsearchConfigRequestMatcher();
+    return new LogsearchFilter(matcher, new ConfigStateProvider(logSearchConfigState, logSearchConfigApiConfig.isConfigApiEnabled()));
   }
 
   private LogsearchFilter logSearchLogLevelFilterManagerFilter() {
     return new LogsearchFilter(logLevelFilterRequestMatcher(), requestUri ->
-            logLevelFilterManagerState.isLogLevelFilterManagerIsReady() ? null : StatusMessage.with(SERVICE_UNAVAILABLE, "Solr log level filter manager is not available"));
+      logLevelFilterManagerState.isLogLevelFilterManagerIsReady()
+          ? null
+          : StatusMessage.with(SERVICE_UNAVAILABLE, "Solr log level filter manager is not available")
+    );
   }
 
   @Bean
@@ -391,16 +404,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         org.apache.hadoop.conf.Configuration config = new org.apache.hadoop.conf.Configuration();
         config.set(LogSearchSslConfig.CREDENTIAL_STORE_PROVIDER_PATH, credentialProviderPath);
         ldapPassword = config.getPassword("logsearch.auth.ldap.manager.password");
-      } else if (StringUtils.isNotBlank(authPropsConfig.getLdapAuthConfig().getLdapManagerPasswordFile())){
-        ldapPassword = FileUtils.readFileToString(new File(
-          authPropsConfig.getLdapAuthConfig().getLdapManagerPasswordFile()), Charset.defaultCharset()).toCharArray();
+      } else if (StringUtils.isNotBlank(authPropsConfig.getLdapAuthConfig().getLdapManagerPasswordFile())) {
+        ldapPassword = FileUtils.readFileToString(new File(authPropsConfig.getLdapAuthConfig().getLdapManagerPasswordFile()),
+          Charset.defaultCharset()).toCharArray();
       } else if (StringUtils.isNotBlank(System.getenv(ldapPasswordEnv))) {
         ldapPassword = System.getenv(ldapPasswordEnv).toCharArray();
       } else if (StringUtils.isNotBlank(authPropsConfig.getLdapAuthConfig().getLdapManagerPassword())) {
         ldapPassword = authPropsConfig.getLdapAuthConfig().getLdapManagerPassword().toCharArray();
       }
     } catch (Exception e) {
-      logger.warn("Error during ldap password initialization. LDAP authentication probably won't work if a manager password will be required.", e);
+      logger.warn("Error during ldap password initialization. LDAP authentication probably won't work if a manager password is required.", e);
     }
     return ldapPassword;
   }
@@ -427,14 +440,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Override
-    public void writeHeaders(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
+    public void writeHeaders(HttpServletRequest request, HttpServletResponse response) {
       for (HeaderWriter headerWriter : additionalHeaderWriters) {
-        headerWriter.writeHeaders(httpServletRequest, httpServletResponse);
+        headerWriter.writeHeaders(request, response);
       }
       if (sslEnabled) {
-        hstsHeaderWriter.writeHeaders(httpServletRequest, httpServletResponse);
+        hstsHeaderWriter.writeHeaders(request, response);
       }
     }
   }
-
 }

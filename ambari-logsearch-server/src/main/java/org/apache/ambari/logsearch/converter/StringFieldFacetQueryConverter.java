@@ -23,7 +23,7 @@ import org.springframework.data.solr.core.query.FacetOptions;
 import org.springframework.data.solr.core.query.SimpleFacetQuery;
 import org.springframework.data.solr.core.query.SimpleStringCriteria;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 @Named
 public class StringFieldFacetQueryConverter extends AbstractConverterAware<String, SimpleFacetQuery> {

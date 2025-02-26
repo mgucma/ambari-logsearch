@@ -20,9 +20,9 @@ package org.apache.ambari.logsearch.web.authenticate;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletRequest; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletResponse; // Zaktualizowano z javax.servlet na jakarta.servlet
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -37,5 +37,6 @@ public class LogsearchLogoutSuccessHandler extends SimpleUrlLogoutSuccessHandler
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication)
       throws IOException, ServletException {
       logger.debug("LogsearchLogoutSuccessHandler ::: onLogoutSuccess");
-  }
+      super.onLogoutSuccess(request, response, authentication); // Dodano wywołanie metody nadklasy
+    }
 }

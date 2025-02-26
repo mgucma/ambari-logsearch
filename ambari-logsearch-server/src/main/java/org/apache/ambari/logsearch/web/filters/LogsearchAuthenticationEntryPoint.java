@@ -20,9 +20,9 @@ package org.apache.ambari.logsearch.web.filters;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletRequest; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletResponse; // Zaktualizowano z javax.servlet na jakarta.servlet
 
 import org.apache.ambari.logsearch.conf.AuthPropsConfig;
 import org.apache.logging.log4j.LogManager;

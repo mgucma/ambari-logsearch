@@ -25,7 +25,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.springframework.data.solr.core.query.SimpleQuery;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 @Named
 public class AuditLogRequestQueryConverter extends AbstractAuditLogRequestQueryConverter<AuditLogRequest, SimpleQuery> {

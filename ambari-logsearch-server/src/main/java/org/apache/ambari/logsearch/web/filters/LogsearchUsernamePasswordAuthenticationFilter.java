@@ -20,9 +20,9 @@ package org.apache.ambari.logsearch.web.filters;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +33,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class LogsearchUsernamePasswordAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
   private static final Logger logger = LogManager.getLogger(LogsearchUsernamePasswordAuthenticationFilter.class);
 
+  @Override
   public void setRememberMeServices(RememberMeServices rememberMeServices) {
     super.setRememberMeServices(rememberMeServices);
   }

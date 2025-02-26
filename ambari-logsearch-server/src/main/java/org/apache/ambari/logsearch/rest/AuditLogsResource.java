@@ -1,11 +1,10 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * distributed with this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
  * http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,49 +18,32 @@
 
 package org.apache.ambari.logsearch.rest;
 
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.EXPORT_USER_TALBE_TO_TEXT_FILE_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_AUDIT_CLUSTERS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_AUDIT_COMPONENTS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_AUDIT_LINE_GRAPH_DATA_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_AUDIT_LOGS_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_AUDIT_SCHEMA_FIELD_LIST_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_SERVICE_LOAD_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.GET_TOP_AUDIT_RESOURCES_OD;
-import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.PURGE_AUDIT_LOGS_OD;
+import static org.apache.ambari.logsearch.doc.DocConstants.AuditOperationDescriptions.*;
 
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.ws.rs.BeanParam;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import jakarta.annotation.Nullable;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.ws.rs.BeanParam;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import org.apache.ambari.logsearch.common.LogSearchConstants;
 import org.apache.ambari.logsearch.common.StatusMessage;
 import org.apache.ambari.logsearch.manager.AuditLogsManager;
 import org.apache.ambari.logsearch.model.metadata.AuditFieldMetadataResponse;
-import org.apache.ambari.logsearch.model.request.impl.body.AuditBarGraphBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.AuditLogBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.AuditServiceLoadBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.ClusterBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.TopFieldAuditLogBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.body.UserExportBodyRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.AuditBarGraphQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.AuditLogQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.AuditServiceLoadQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.TopFieldAuditLogQueryRequest;
-import org.apache.ambari.logsearch.model.request.impl.query.UserExportQueryRequest;
+import org.apache.ambari.logsearch.model.request.impl.body.*;
+import org.apache.ambari.logsearch.model.request.impl.query.*;
 import org.apache.ambari.logsearch.model.response.AuditLogResponse;
 import org.apache.ambari.logsearch.model.response.BarGraphDataListResponse;
 import org.springframework.context.annotation.Scope;
@@ -87,7 +69,6 @@ public class AuditLogsResource {
   public AuditFieldMetadataResponse getSolrFieldListGet() {
     return auditLogsManager.getAuditLogSchemaMetadata();
   }
-
 
   @POST
   @Path("/schema/fields")
@@ -222,5 +203,4 @@ public class AuditLogsResource {
   public List<String> getClustersForAuditLogPost() {
     return auditLogsManager.getClusters();
   }
-
 }

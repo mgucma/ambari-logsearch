@@ -15,9 +15,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Map;
 
-import javax.servlet.FilterChain;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.apache.ambari.logsearch.common.StatusMessage;
 import org.apache.ambari.logsearch.util.JSONUtil;

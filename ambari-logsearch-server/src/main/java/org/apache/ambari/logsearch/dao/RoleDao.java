@@ -29,9 +29,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.security.core.GrantedAuthority;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -55,7 +55,7 @@ public class RoleDao {
   private final Map<String, List<String>> simpleRolesMap = new HashMap<>();
 
   @SuppressWarnings("unchecked")
-  @PostConstruct
+  @PostConstruct // Adnotacja z jakarta.annotation.PostConstruct
   public void init() {
     if (authPropsConfig.isFileAuthorization()) {
       try {
@@ -82,7 +82,7 @@ public class RoleDao {
   public List<GrantedAuthority> getRolesForUser(String user) {
     List<GrantedAuthority> authorities = new ArrayList<>();
     if (authPropsConfig.isFileAuthorization()) {
-        List<String > roles = simpleRolesMap.get(user);
+        List<String> roles = simpleRolesMap.get(user);
         if (!Collections.isEmpty(roles)) {
           for (String role : roles) {
             String roleName = "ROLE_" + role;

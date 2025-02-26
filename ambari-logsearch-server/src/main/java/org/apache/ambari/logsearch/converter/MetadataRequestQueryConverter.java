@@ -23,7 +23,7 @@ import org.apache.ambari.logsearch.util.SolrUtil;
 import org.apache.commons.lang.StringUtils;
 import org.apache.solr.client.solrj.SolrQuery;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -21,7 +21,7 @@ package org.apache.ambari.logsearch.model.request.impl.query;
 import org.apache.ambari.logsearch.common.LogSearchConstants;
 import org.apache.ambari.logsearch.model.request.impl.AuditComponentRequest;
 
-import javax.ws.rs.QueryParam;
+import jakarta.ws.rs.QueryParam;
 
 public class AuditComponentQueryRequest extends BaseLogQueryRequest implements AuditComponentRequest {
   @QueryParam(LogSearchConstants.REQUEST_PARAM_USERS)

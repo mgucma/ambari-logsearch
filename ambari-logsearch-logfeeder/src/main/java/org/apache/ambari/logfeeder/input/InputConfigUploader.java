@@ -26,8 +26,8 @@ import org.apache.ambari.logsearch.config.api.LogSearchConfigLogFeeder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.nio.charset.Charset;

@@ -31,7 +31,7 @@ import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.COMPONENT;
 import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants.PATH;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 @Named
 public class HostLogFilesRequestQueryConverter extends AbstractOperationHolderConverter<HostLogFilesRequest, SimpleFacetQuery>{

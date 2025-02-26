@@ -18,7 +18,7 @@
  */
 package org.apache.ambari.logsearch.common;
 
-import javax.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response;
 
 public class StatusMessage {
   public static StatusMessage with(int status) {

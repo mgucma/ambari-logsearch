@@ -21,15 +21,15 @@ package org.apache.ambari.logsearch.rest;
 
 import java.util.Collection;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.validation.Valid;
-import javax.ws.rs.BeanParam;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
+import jakarta.validation.Valid;
+import jakarta.ws.rs.BeanParam;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
 
 import org.apache.ambari.logsearch.manager.MetadataManager;
 import org.apache.ambari.logsearch.model.request.impl.query.MetadataQueryRequest;
@@ -98,5 +98,4 @@ public class MetadataResource {
   public void deleteMetadataList(Collection<LogsearchMetaData> metadata) {
     metadataManager.deleteMetadata(metadata);
   }
-
 }

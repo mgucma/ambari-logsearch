@@ -29,9 +29,9 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 @Named
 public class LogLevelManagerFilterConfigurer implements Configurer {
@@ -58,7 +58,7 @@ public class LogLevelManagerFilterConfigurer implements Configurer {
     this.logSearchConfigMapHolder = logSearchConfigMapHolder;
   }
 
-  @PostConstruct
+  @PostConstruct // Adnotacja z jakarta.annotation.PostConstruct
   @Override
   public void start() {
     Thread setupThread = new Thread("setup_solr_loglevel_filter_manager") {

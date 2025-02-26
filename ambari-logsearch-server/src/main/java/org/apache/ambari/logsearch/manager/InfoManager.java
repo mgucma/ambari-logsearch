@@ -27,8 +27,8 @@ import org.apache.ambari.logsearch.conf.AuthPropsConfig;
 import org.apache.ambari.logsearch.conf.LogSearchConfigApiConfig;
 import org.springframework.beans.factory.annotation.Value;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 @Named
 public class InfoManager extends JsonManagerBase {

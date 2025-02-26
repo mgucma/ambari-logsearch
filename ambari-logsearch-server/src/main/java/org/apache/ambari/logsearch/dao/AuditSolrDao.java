@@ -19,9 +19,9 @@
 
 package org.apache.ambari.logsearch.dao;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 import org.apache.ambari.logsearch.common.LogType;
 import org.apache.ambari.logsearch.conf.SolrAuditLogPropsConfig;
@@ -92,6 +92,4 @@ public class AuditSolrDao extends SolrDaoBase {
   public SolrPropsConfig getSolrPropsConfig() {
     return this.solrAuditLogPropsConfig;
   }
-
-
 }

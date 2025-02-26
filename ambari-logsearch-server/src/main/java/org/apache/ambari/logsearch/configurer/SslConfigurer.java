@@ -19,10 +19,9 @@
 
 package org.apache.ambari.logsearch.configurer;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 import javax.net.ssl.SSLContext;
-
 import org.apache.ambari.logsearch.conf.LogSearchSslConfig;
 import org.apache.ambari.logsearch.util.FileUtil;
 import org.apache.commons.io.FileUtils;
@@ -102,27 +101,27 @@ public class SslConfigurer {
   @Inject
   private LogSearchSslConfig logSearchSslConfig;
   
-  private String getKeyStoreLocation() {
+  public String getKeyStoreLocation() {
     return System.getProperty(KEYSTORE_LOCATION_ARG);
   }
 
-  private String getKeyStorePassword() {
+  public String getKeyStorePassword() {
     return System.getProperty(KEYSTORE_PASSWORD_ARG);
   }
 
-  private String getKeyStoreType() {
+  public String getKeyStoreType() {
     return System.getProperty(KEYSTORE_TYPE_ARG, DEFAULT_KEYSTORE_TYPE);
   }
   
-  private String getTrustStoreLocation() {
+  public String getTrustStoreLocation() {
     return System.getProperty(TRUSTSTORE_LOCATION_ARG);
   }
 
-  private String getTrustStorePassword() {
+  public String getTrustStorePassword() {
     return System.getProperty(TRUSTSTORE_PASSWORD_ARG);
   }
 
-  private String getTrustStoreType() {
+  public String getTrustStoreType() {
     return System.getProperty(TRUSTSTORE_TYPE_ARG, DEFAULT_TRUSTSTORE_TYPE);
   }
 
@@ -134,7 +133,7 @@ public class SslConfigurer {
     return StringUtils.isNotEmpty(getTrustStoreLocation());
   }
   
-  public SslContextFactory getSslContextFactory() {
+  public SslContextFactory.Server getSslContextFactory() {
     // Używamy SslContextFactory.Server, która jest implementacją SslContextFactory
     SslContextFactory.Server sslContextFactory = new SslContextFactory.Server();
     sslContextFactory.setKeyStorePath(getKeyStoreLocation());
@@ -150,7 +149,7 @@ public class SslConfigurer {
   }
 
   public SSLContext getSSLContext() {
-    SslContextFactory.Server sslContextFactory = (SslContextFactory.Server) getSslContextFactory();
+    SslContextFactory.Server sslContextFactory = getSslContextFactory();
     
     try {
       sslContextFactory.start();
@@ -369,5 +368,4 @@ public class SslConfigurer {
       throw new RuntimeException(e);
     }
   }
-
 }

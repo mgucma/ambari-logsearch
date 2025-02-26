@@ -21,15 +21,15 @@ package org.apache.ambari.logsearch.web.filters;
 import java.io.IOException;
 import java.security.SecureRandom;
 
-import javax.inject.Inject;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import jakarta.inject.Inject; // Zaktualizowano z javax.inject na jakarta.inject
+import jakarta.servlet.FilterChain; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.ServletException; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.ServletRequest; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.ServletResponse; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.Cookie; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletRequest; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpServletResponse; // Zaktualizowano z javax.servlet na jakarta.servlet
+import jakarta.servlet.http.HttpSession; // Zaktualizowano z javax.servlet na jakarta.servlet
 
 import org.apache.ambari.logsearch.common.LogSearchContext;
 import org.apache.ambari.logsearch.manager.SessionManager;
@@ -59,8 +59,8 @@ public class LogsearchSecurityContextFormationFilter extends GenericFilterBean {
   /*
    * (non-Javadoc)
    * 
-   * @see javax.servlet.Filter#doFilter(javax.servlet.ServletRequest,
-   * javax.servlet.ServletResponse, javax.servlet.FilterChain)
+   * @see jakarta.servlet.Filter#doFilter(jakarta.servlet.ServletRequest,
+   * jakarta.servlet.ServletResponse, jakarta.servlet.FilterChain)
    */
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException,

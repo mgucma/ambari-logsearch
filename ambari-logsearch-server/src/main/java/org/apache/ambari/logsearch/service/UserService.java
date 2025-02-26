@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 import org.apache.ambari.logsearch.dao.UserDao;
 import org.apache.ambari.logsearch.web.model.User;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 @Service
 public class UserService implements UserDetailsService {

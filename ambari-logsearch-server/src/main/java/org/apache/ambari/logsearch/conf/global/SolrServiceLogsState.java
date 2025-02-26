@@ -18,7 +18,7 @@
  */
 package org.apache.ambari.logsearch.conf.global;
 
-import javax.inject.Named;
+import jakarta.inject.Named;
 
 @Named
 public class SolrServiceLogsState implements SolrCollectionState {

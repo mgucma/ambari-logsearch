@@ -33,8 +33,8 @@ import org.apache.hadoop.metrics2.sink.timeline.TimelineMetrics;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.inject.Inject;
+import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 
 public class MetricsManager {
   private static final Logger logger = LogManager.getLogger(MetricsManager.class);

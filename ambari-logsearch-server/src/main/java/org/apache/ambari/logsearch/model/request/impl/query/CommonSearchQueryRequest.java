@@ -23,9 +23,9 @@ import org.apache.ambari.logsearch.model.request.impl.CommonSearchRequest;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-import javax.annotation.Nullable;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.QueryParam;
+import jakarta.annotation.Nullable;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.QueryParam;
 
 public class CommonSearchQueryRequest implements CommonSearchRequest {
 

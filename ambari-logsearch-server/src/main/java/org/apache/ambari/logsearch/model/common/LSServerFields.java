@@ -21,7 +21,7 @@ package org.apache.ambari.logsearch.model.common;
 
 import java.util.Set;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import org.apache.ambari.logsearch.config.api.model.inputconfig.Fields;
 

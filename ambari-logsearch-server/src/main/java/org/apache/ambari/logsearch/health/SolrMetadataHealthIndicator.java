@@ -21,8 +21,8 @@ package org.apache.ambari.logsearch.health;
 import org.apache.ambari.logsearch.dao.MetadataSolrDao;
 import org.springframework.data.solr.core.SolrTemplate;
 
-import javax.inject.Inject;
-import javax.inject.Named;
+import jakarta.inject.Inject;
+import jakarta.inject.Named;
 
 @Named
 public class SolrMetadataHealthIndicator extends AbstractSolrHealthIndicator {

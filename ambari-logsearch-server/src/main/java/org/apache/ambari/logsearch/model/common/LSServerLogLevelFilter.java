@@ -22,7 +22,7 @@ package org.apache.ambari.logsearch.model.common;
 import java.util.Date;
 import java.util.List;
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 import org.apache.ambari.logsearch.config.api.model.loglevelfilter.LogLevelFilter;
 

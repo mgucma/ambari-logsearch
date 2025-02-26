@@ -35,36 +35,35 @@ import org.springframework.boot.web.servlet.server.ServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import javax.inject.Inject;
-import javax.servlet.http.HttpSessionListener;
+import jakarta.inject.Inject;
+import jakarta.servlet.http.HttpSessionListener;
 
 @Configuration
 public class LogSearchServletConfig {
 
-  @Inject
-  private ServerProperties serverProperties;
+    @Inject
+    private ServerProperties serverProperties;
 
-  @Inject
-  private LogSearchHttpConfig logSearchHttpConfig;
+    @Inject
+    private LogSearchHttpConfig logSearchHttpConfig;
 
-  @Inject
-  private SslConfigurer sslConfigurer;
+    @Inject
+    private SslConfigurer sslConfigurer;
 
-  @Bean
-  public HttpSessionListener httpSessionListener() {
-    return new LogSearchSessionListener();
-  }
+    @Bean
+    public HttpSessionListener httpSessionListener() {
+        return new LogSearchSessionListener();
+    }
 
-  @Bean
-  public ServletRegistrationBean jerseyServlet() {
-    ServletRegistrationBean registration = new ServletRegistrationBean(new ServletContainer(), "/api/v1/*");
-    registration.addInitParameter(ServletProperties.JAXRS_APPLICATION_CLASS, LogSearchJerseyResourceConfig.class.getName());
-    return registration;
-  }
+    @Bean
+    public ServletRegistrationBean jerseyServlet() {
+        ServletRegistrationBean registration = new ServletRegistrationBean(new ServletContainer(), "/api/v1/*");
+        registration.addInitParameter(ServletProperties.JAXRS_APPLICATION_CLASS, LogSearchJerseyResourceConfig.class.getName());
+        return registration;
+    }
 
-  @Bean
-  public ServletWebServerFactory webServerFactory() {
-    return new JettyServletWebServerFactory();
-  }
-
+    @Bean
+    public ServletWebServerFactory webServerFactory() {
+        return new JettyServletWebServerFactory();
+    }
 }

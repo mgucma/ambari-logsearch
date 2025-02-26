@@ -25,6 +25,8 @@ import org.springframework.session.config.annotation.web.http.EnableSpringHttpSe
 import org.springframework.session.web.context.AbstractHttpSessionApplicationInitializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import static org.apache.ambari.logsearch.common.LogSearchConstants.LOGSEARCH_SESSION_ID;
 
 @Configuration
@@ -40,7 +42,6 @@ public class LogSearchSessionConfig extends AbstractHttpSessionApplicationInitia
 
   @Bean
   public MapSessionRepository sessionRepository() {
-    return new MapSessionRepository();
+    return new MapSessionRepository(new ConcurrentHashMap<>());
   }
-
 }

@@ -19,8 +19,8 @@
 
 package org.apache.ambari.logsearch.web.filters;
 
-import static javax.ws.rs.core.Response.Status.CONFLICT;
-import static javax.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
+import static jakarta.ws.rs.core.Response.Status.CONFLICT;
+import static jakarta.ws.rs.core.Response.Status.SERVICE_UNAVAILABLE;
 
 import org.apache.ambari.logsearch.common.StatusMessage;
 import org.apache.ambari.logsearch.conf.global.LogSearchConfigState;
