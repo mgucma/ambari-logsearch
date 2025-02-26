@@ -26,6 +26,7 @@ import static org.apache.ambari.logsearch.solr.SolrConstants.ServiceLogConstants
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -42,7 +43,6 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.core.NodeConfig;
-import org.apache.solr.core.SolrResourceLoader;
 
 public class Solr {
   public static final DateTimeFormatter SOLR_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
@@ -62,9 +62,9 @@ public class Solr {
       FileUtils.deleteDirectory(solrHomeDir);
     solrHomeDir.mkdirs();
 
-    SolrResourceLoader solrResourceLoader = new SolrResourceLoader(solrHomeDir.toPath());
-
-    NodeConfig config = new NodeConfig.NodeConfigBuilder("embeddedSolrServerNode", solrResourceLoader)
+    // Przekazujemy bezpośrednio ścieżkę solrHomeDir.toPath()
+    Path solrHomePath = solrHomeDir.toPath();
+    NodeConfig config = new NodeConfig.NodeConfigBuilder("embeddedSolrServerNode", solrHomePath)
             .setConfigSetBaseDirectory(targetConfigSetDir.getAbsolutePath())
             .build();
 
